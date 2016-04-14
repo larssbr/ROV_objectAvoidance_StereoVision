@@ -22,8 +22,6 @@ python streamCam.py
  
  # Information
  
- 
- 
  # Focal length
  
  focal_length = fx*(35/1360)
