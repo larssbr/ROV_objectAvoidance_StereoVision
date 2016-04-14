@@ -4,6 +4,9 @@ python streamCam.py
 
 # Dependencies
  
+ - socket
+ - math
+ - cProfile
  - time 
  - numpy
  - opencv 2.4.9
