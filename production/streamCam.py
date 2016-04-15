@@ -202,14 +202,104 @@ def rad2deg(radians):
     degrees = 180 * radians / pi
     return degrees
 
-
 def deg2rad(degrees):
     # radians = pi * degrees / 180
     pi = math.pi
     radians = pi * degrees / 180
     return radians
 
-##################################################
+########### CENTROID finder CODE ###########3
+
+def trackObject(img):
+    '''Accepts BGR image as Numpy array
+       Returns: (x,y) coordinates of centroid if found
+                (-1,-1) if no centroid was found
+                None if user hit ESC
+    '''
+
+    # define the list of boundaries
+    boundaries = [
+        ([17, 15, 100], [50, 56, 200]),  # red
+        ([86, 31, 4], [220, 88, 50]),  # blue
+        ([25, 146, 190], [62, 174, 250]),  # yellow
+        ([103, 86, 65], [145, 133, 128])  # gray
+    ]
+
+    #redBoundaries = [([17, 15, 100], [50, 56, 200])]
+    #lower = np.array([17, 15, 100])
+    #upper = np.array([50, 56, 200])
+
+    # grayBoundary = ([103, 86, 65], [145, 133, 128])
+    lower = np.array([103, 86, 65])
+    upper = np.array([145, 133, 128])
+    ######### Treshold #############3
+
+    #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    #blurred = cv2.GaussianBlur(img, (5, 5), 0)
+    cv2.imshow("Image with gaussianBlur", img)
+
+    #(T, thresh) = cv2.threshold(blurred, 155, 255, cv2.THRESH_BINARY)
+    (T, thresh) = cv2.threshold(img.astype(np.uint8), 100, 255, cv2.THRESH_BINARY)
+    cv2.imshow("Threshold Binary", thresh)
+
+    #(T, threshInv) = cv2.threshold(blurred, 155, 255, cv2.THRESH_BINARY_INV)
+    (T, threshInv) = cv2.threshold(img.astype(np.uint8), 100, 255, cv2.THRESH_BINARY_INV)
+
+    cv2.imshow("Threshold Binary Inverse", threshInv)
+
+    coins = cv2.bitwise_and(img, img, mask =threshInv)
+    cv2.imshow("Coins", coins)
+    cv2.waitKey(0)
+
+    # find the colors within the specified boundaries and apply
+    # the mask
+    #mask = cv2.inRange(img, lower, upper)
+    #output = cv2.bitwise_and(img, img, mask = mask)
+
+    # Blur the mask
+    #bmask = cv2.GaussianBlur(mask, (5,5),0)
+
+    # Take the moments to get the centroid
+    moments = cv2.moments(coins)  #bmask)
+    m00 = moments['m00']
+    print m00
+    centroid_x, centroid_y = None, None
+    if m00 != 0:
+        print "m00 != 0"
+        centroid_x = int(moments['m10']/m00)
+        centroid_y = int(moments['m01']/m00)
+
+    # Assume no centroid
+    ctr = (-1,-1)
+
+    # Use centroid if it exists
+    if centroid_x != None and centroid_y != None:
+
+        ctr = (centroid_x, centroid_y)
+
+        # Put black circle in at centroid in image
+        centerCircle_Color = (62, 174, 250)
+        cv2.circle(img, ctr, 4, centerCircle_Color)
+
+    # Display full-color image
+    WINDOW_NAME = "ObjectFinder"
+    #cv2.imshow(WINDOW_NAME, img)
+    #cv2.waitKey(0)
+
+    # Force image display, setting centroid to None on ESC key input
+    if cv2.waitKey(1) & 0xFF == 27:
+        ctr = None
+
+    # want to return position of centroid in picture
+
+    return img, ctr # we return the image with the centroid center -->ctr = (centroid_x, centroid_y)
+    # want to calculate average distance to this centroid as well
+
+
+
+
+
+##################Point Cloud CODE################################
 
 ply_header = '''ply
 format ascii 1.0
@@ -460,6 +550,11 @@ def Main():
                     elapsed_time = time.time() - start_time
                     '''
 
+                    # FINDING the object
+                    centroid_img, ctr = trackObject(Depth_map)
+
+                    cv2.imshow("centroid_img", centroid_img)
+
                     # Compare the 3 parts, (Left, Center, Right) with each other to find in what area the object is.
                     #returnValue = compare3windows(depthMap, somthing )
                     # Image ROI
@@ -519,8 +614,6 @@ def Main():
 if __name__ == '__main__':
     # cProfile makes it possible for us to analyse the time each function uses
     cProfile.run('Main()')
-
-
 
 # todo: filter out everythong further away than 2 meter to test
 
