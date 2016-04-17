@@ -11,9 +11,9 @@ import stereo
 import colorMethods as color
 
 import disparityMapCalc as disp
-###########
-# HELPERS #
-###########
+import processesBWdisparityIMG as find
+
+
 
 def _displayDepth(name, mat):
     s = v = (np.ones(mat.shape) * 255).astype(np.uint8)
@@ -379,22 +379,15 @@ def FourierMethod(img, method):
 
     return img_back
 
+
+
 ########
 # MAIN #
 def main():
 
-    imgLeft = r"F:\disparityimg_testset\Run4\left1\LeftCameraRun4_211.png"
-    imgRight = r"F:\disparityimg_testset\Run4\right1\RightCameraRun4_211.png"
-
-    #imgLeft = r"testImages\tokt1_L_55.jpg"
-    #imgRight = r"testImages\tokt1_R_55.jpg"
-
-    # Images set without ony obstacle in front
-    #imgLeft = r"C:\MASTER_DATASET\Desembertokt\Stereo Camera\Standard lawn mower pattern\151210-134911.3235L.jpg"
-    #imgRight = r"C:\MASTER_DATASET\Desembertokt\Stereo Camera\Standard lawn mower pattern\151210-134911.3235R.jpg"
-
-    #imgRight = r"F:\MASTER_thesis\GUNNERUS\Desembertokt\Stereo Camera\DP on the star\151210-131808.3445R.jpg"
-    #imgLeft = r"F:\MASTER_thesis\GUNNERUS\Desembertokt\Stereo Camera\DP on the star\151210-131808.3445L.jpg"
+    # set the images you want to test here
+    imgLeft = r"testImages\obstacle1\LeftCameraRun4_211.png"
+    imgRight = r"testImages\obstacle1\RightCameraRun4_211.png"
 
     frame_left = cv2.imread(imgLeft)
     frame_right = cv2.imread(imgRight)
@@ -432,15 +425,14 @@ def main():
     img2 = frame_right
 
         # Calculatem edge detection
+    # TODO: create canny edge -- decider, if there is to "little" edges in the image, then dont process the image furter...
 
-    edge1 = cv2.Canny(img1,25,75)
-    edge2 = cv2.Canny(img2,25,75)
+    #edge1 = cv2.Canny(img1,25,75)
+    #edge2 = cv2.Canny(img2,25,75)
 
-    cv2.imshow("edge1", edge1)
-    cv2.imshow("edge2", edge2)
-    cv2.waitKey(0)
-
-
+    #cv2.imshow("edge1", edge1)
+    #cv2.imshow("edge2", edge2)
+    #cv2.waitKey(0)
 
 
     elapsed_time = time.time() - start_time
@@ -449,21 +441,16 @@ def main():
     disparity_visual = disparityCalc(img1, img2, intrinsic_matrixL, intrinsic_matrixR, distCoeffL, distCoeffR)
     # display disparity map
     print "displaying disparity"
-    cv2.imshow("disparity_visual", disparity_visual)
-    cv2.waitKey(0)
+    #cv2.imshow("disparity_visual", disparity_visual)
+    #cv2.waitKey(0)
     #cv2.imshow("disparityMovie", disparity_visual)
     dispTime = (time.time() - start_time) + 0.0035
-
-
-
-
-
 
     # Imporve disparity image, by using a scale sin(20) to sin(50) --> becouse the camera is tilted 35 or 45 degrees?
     # make an array of values from sin(20) to sin(50)
     disparity_visual_adjusted = camereaAngleAdjuster(disparity_visual)
     cv2.imshow("disparity_visual_adjusted", disparity_visual_adjusted)
-    cv2.waitKey(0)
+    #cv2.waitKey(0)
 
 
     # apply mask so that disparityDisctance() don`t divide by zero
@@ -475,9 +462,46 @@ def main():
     disparity_visual_adjusted = (disparity_visual_adjusted -min_disp)/num_disp
 
 
-    #disparity_visual_adjusted = FourierMethod(disparity_visual_adjusted,2)
-    #cv2.imshow("disparity_visual_adjusted with fourier", disparity_visual_adjusted)
+    # FIND the object in the disparity image #############################################
+    # disparity_visual_adjusted_Centroid, ctr = findCentroifOfObject(disparity_visual_adjusted)
+    #print "ctr"
+    #print ctr
+    #cv2.imshow("disparity_visual_adjusted_Centroid", disparity_visual_adjusted_Centroid)
     #cv2.waitKey(0)
+
+    disparity_visual_adjusted_Centroid2, centerCordinates = find.findCentroids( disparity_visual)#disparity_visual)
+    cv2.imshow('disparity_visual_adjusted_Centroid2', disparity_visual_adjusted_Centroid2)
+    0xFF & cv2.waitKey()
+
+    objectCenter = find.getAverageCentroidPosition(centerCordinates)
+
+    #Draw the new center in white and display image
+    centerCircle_Color = (255, 255, 255)
+    cv2.circle(disparity_visual_adjusted_Centroid2, objectCenter, 10, centerCircle_Color)
+    cv2.imshow('center object', disparity_visual_adjusted_Centroid2)
+    cv2.waitKey(0)
+
+    # USE objectCenter and disparity image to calculate distance to this point.
+
+    ########## NEED poincloud inforation to know distance to centroid
+
+    points3D = reconstructScene(disparityMap, stereoParams);
+
+    # Convert to meters and create a pointCloud object
+    #points3D = points3D ./ 1000;
+
+
+    np.ravel_multi_index()
+    # Find the 3-D world coordinates of the centroids.
+    #centroidsIdx = np.ravel_multi_index(np.shape(disparity_visual), centroids(:, 2), centroids(:, 1));
+    centroidsIdx = np.ravel_multi_index(np.shape(disparity_visual), centerCordinates[:, 2], centerCordinates[:, 1])
+    X = points3D(:, :, 1);
+    Y = points3D(:, :, 2);
+    Z = points3D(:, :, 3);
+    #centroids3D = [X(centroidsIdx)'; Y(centroidsIdx)'; Z(centroidsIdx)'];
+    centroids3D = [X(centroidsIdx)T Y(centroidsIdx)T Z(centroidsIdx)T]
+
+
 
 
     # calculate the Depth_map
@@ -495,7 +519,7 @@ def main():
         f.write(ply_string)
     '''
 
-    # todo: filter out everythong further away than 2 meter to test
+    # todo: filter out everything further away than 2 meter to test
 
     # Save the images that has been used to create disparity
     pairNumber = pairNumber + 1
@@ -507,7 +531,7 @@ def main():
     # writing the images to disk
     cv2.imwrite(imgNameString_L, img1)
     cv2.imwrite(imgNameString_R, img2)
-    cv2.imwrite(imgNameString_DISTANCE, Depth_map)
+    cv2.imwrite(imgNameString_DISTANCE, disparity_visual)#Depth_map)
 
 
     # Compare the 3 parts, (Left, Center, Right) with each other to find in what area the object is.

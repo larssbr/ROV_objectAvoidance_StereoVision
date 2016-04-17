@@ -249,7 +249,7 @@ def trackObject(img):
 
     coins = cv2.bitwise_and(img, img, mask =threshInv)
     cv2.imshow("Coins", coins)
-    cv2.waitKey(0)
+    #cv2.waitKey(0)
 
     # find the colors within the specified boundaries and apply
     # the mask
