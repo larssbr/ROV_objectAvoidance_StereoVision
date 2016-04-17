@@ -13,7 +13,6 @@ or for each 2 seconds
 
  ---> Calculate distance -
 
-
 """
 
 from pymba import *
@@ -22,10 +21,10 @@ import cv2
 import time
 import cProfile
 import math # to get math.pi value
-
 import socket # to send UDP message to labview pc
-
 import disparityMapCalc as disp
+
+
 #import stereo as stereo
 
 def printTime():
@@ -294,10 +293,6 @@ def trackObject(img):
 
     return img, ctr # we return the image with the centroid center -->ctr = (centroid_x, centroid_y)
     # want to calculate average distance to this centroid as well
-
-
-
-
 
 ##################Point Cloud CODE################################
 
@@ -570,13 +565,6 @@ def Main():
 
                     # TODO: Send UDP message to pc running labview program
                     sendUDPmessage(directionMessage)
-
-
-
-
-
-
-
 
                 ##################### END PROGRAM CODE ############################################
 

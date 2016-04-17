@@ -3,6 +3,8 @@ import numpy as np
 import math
 import sys
 
+from matplotlib import pyplot as plt
+
 
 ##### helper methods
 
@@ -187,6 +189,17 @@ def calcDistanceToKnownObject(object_real_world_mm, pixelSizeOfObject):
     distance_mm = (object_real_world_mm * focallength_mm) / object_image_sensor_mm
     return distance_mm
 
+def findXposMessage(objectCenter):
+    cx, cy = objectCenter
+    # make new "coordinate system"
+    middleX = 1360/2 # 680
+
+    if cx < middleX :
+        Xpos = - (middleX - cx) # - 50 is a little to the left
+    else:
+        Xpos = cx - middleX
+
+    return Xpos
 
 # Not used
 def findCentroifOfObject(img):
@@ -265,10 +278,56 @@ def findCentroifOfObject(img):
     #cv2.destroyAllWindows()
 
 
+def objectTreshold(leftImg, rightImage):
+    # Initiate SIFT detector
+    sift = cv2.SIFT()
+
+    # find the keypoints and descriptors with SIFT
+    kp1, des1 = sift.detectAndCompute(leftImg,None)
+    kp2, des2 = sift.detectAndCompute(rightImage,None)
+
+    # BFMatcher with default params
+    bf = cv2.BFMatcher()
+    matches = bf.knnMatch(des1 ,des2, k=2)
+
+    acceptedINT = 0
+    # Apply ratio test
+    good = []
+    for m,n in matches:
+        if m.distance < 0.3*n.distance:
+            good.append([m])
+            acceptedINT = acceptedINT + 1
+
+    matchesINT = len(matches)
+    return matchesINT #acceptedINT
+
+
+
+
+
+
+
 def mainProcess():
 
     filename = r"savedImages\tokt1_Depth_map_1.jpg"
     IMGbw = cv2.imread(filename, cv2.CV_LOAD_IMAGE_GRAYSCALE)
+
+    #filenameLeft = r"savedImages\tokt1_L_1.jpg"
+    #filenameRight = r"savedImages\tokt1_R_1.jpg"
+
+    filenameLeft = r"testImages\lawnMowerPattern_seafloor\151210-134618.3229L.jpg"
+    filenameRight = r"testImages\lawnMowerPattern_seafloor\151210-134618.3229R.jpg"
+
+    filenameLeft = r"testImages\lawnMowerPattern_seafloor\151210-134628.3236L.jpg"
+    filenameRight = r"testImages\lawnMowerPattern_seafloor\151210-134628.3236R.jpg"
+
+    filenameLeft = r"testImages\obstacle1\RightCameraRun4_179.png"
+    filenameRight = r"testImages\obstacle1\LeftCameraRun4_179.png"
+
+
+
+    IMG_L = cv2.imread(filenameLeft)
+    IMG_R = cv2.imread(filenameRight)
 
 
     # Erode to remove noise
@@ -276,19 +335,18 @@ def mainProcess():
 
     # DILATE white points...
     IMGbw = cv2.dilate(IMGbw, np.ones((5, 5)))
-    IMGbw = cv2.erode(IMGbw, np.ones((4, 4)))
-    IMGbw = cv2.dilate(IMGbw, np.ones((5, 5)))
+    #IMGbw = cv2.erode(IMGbw, np.ones((4, 4)))
+    #IMGbw = cv2.dilate(IMGbw, np.ones((5, 5)))
 
     # calculate the centers of the small "objects"
     image, centerCordinates = findCentroids(IMGbw)
 
-    cv2.imshow("image after finding centroids", image )
+    cv2.imshow("image after finding centroids", image)
     cv2.waitKey(0)
 
     centerCordinates = np.asarray(centerCordinates) # make list centerCordinates into numpy array
 
     imageDraw, pixelSizeOfObject = drawStuff(centerCordinates, image.copy())
-
 
     object_real_world_mm = 500 # 1000mm = 1 meter
     distance_mm = calcDistanceToKnownObject(object_real_world_mm, pixelSizeOfObject)
@@ -300,10 +358,7 @@ def mainProcess():
     cv2.imshow("image after finding minimum bounding rectangle of object", imageDraw )
     cv2.waitKey(0)
 
-
     objectCenter = getAverageCentroidPosition(centerCordinates)
-
-
 
     #draw the new center in white
     centerCircle_Color = (255, 255, 255)
@@ -313,9 +368,19 @@ def mainProcess():
     cv2.imshow('center object', image)
     cv2.waitKey(0)
 
+    # get direction
+    Xpos = findXposMessage(objectCenter)
+    print "Xpos"
+    print Xpos
 
-    # CALCULATE the distance to this object
 
+
+    # check if there is a object in the image by using the treshold algorithm
+    matchINT = objectTreshold(IMG_L, IMG_R)
+    print "matchINT"
+    print matchINT
+
+    # CALCULATE the distance to this object using a point cloud
 
 
 if __name__ == '__main__':
