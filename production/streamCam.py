@@ -268,7 +268,7 @@ def point_cloud(disparity_image, image_left, focal_length):
     #return result # ply_string
 
 
-def findBiggestObject(img, pts_que_center):
+def findBiggestObject(img, pts_que_center, radiusTresh=40):
     blurred = cv2.GaussianBlur(img, (11, 11), 0)
     mask = blurred
     mask = cv2.erode(mask, None, iterations=2)
@@ -290,7 +290,7 @@ def findBiggestObject(img, pts_que_center):
         center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
 
         # only proceed if the radius meets a minimum size
-        if radius > 40: # works as a treshold
+        if radius > radiusTresh: # works as a treshold
             # draw the circle and centroid on the frame,
             # then update the list of tracked points
             cv2.circle(img, (int(x), int(y)), int(radius),
@@ -319,6 +319,14 @@ def findBiggestObject(img, pts_que_center):
 def Main():
 
     pts_que_center = deque(maxlen=15)
+    # tresh value
+    pts_que_center_list = [deque(maxlen=10), deque(maxlen=10), deque(maxlen=10), deque(maxlen=10), deque(maxlen=10)] # list holds 5 elements
+
+
+    radiusTresh = 40
+
+
+
 
     with Vimba() as vimba:
         system = vimba.getSystem()
@@ -486,7 +494,7 @@ def Main():
                     objectCenter = proc.getAverageCentroidPosition(centerCordinates)
 
                     ####### make image that buffers "old" centerpoints, and calculate center of the biggest centroid -- hopefully that is the biggest object
-                    imgStaaker, center = findBiggestObject(disparity_visual.copy(), pts_que_center)
+                    imgStaaker, center = findBiggestObject(disparity_visual.copy(), pts_que_center, radiusTresh=radiusTresh)
 
                      # update the points queue
                     # pts_que_center.appendleft(objectCenter)
@@ -523,7 +531,7 @@ def Main():
                     # Imporve disparity image, by using a scale sin(20) to sin(50) --> becouse the camera is tilted 35 or 45 degrees?
                     # make an array of values from sin(20) to sin(50)
                     disparity_visual_adjusted = camereaAngleAdjuster(disparity_visual)
-                    #cv2.imshow("disparity_visual_adjusted", disparity_visual_adjusted)
+                    cv2.imshow("disparity_visual_adjusted", disparity_visual_adjusted)
 
 
                     # apply mask so that disparityDisctance() don`t divide by zero
@@ -621,5 +629,10 @@ def Main():
 if __name__ == '__main__':
     # cProfile makes it possible for us to analyse the time each function uses
     cProfile.run('Main()')
+
+    # values to change in the program
+
+
+    # Main()
 
 # todo: filter out everythong further away than 2 meter to test
