@@ -23,6 +23,8 @@ import cProfile
 import math # to get math.pi value
 import socket # to send UDP message to labview pc
 import disparityMapCalc as disp
+import processesBWdisparityIMG as proc
+from collections import deque # to keep track of a que of last poitions of the center of an object
 
 
 #import stereo as stereo
@@ -207,93 +209,6 @@ def deg2rad(degrees):
     radians = pi * degrees / 180
     return radians
 
-########### CENTROID finder CODE ###########3
-
-def trackObject(img):
-    '''Accepts BGR image as Numpy array
-       Returns: (x,y) coordinates of centroid if found
-                (-1,-1) if no centroid was found
-                None if user hit ESC
-    '''
-
-    # define the list of boundaries
-    boundaries = [
-        ([17, 15, 100], [50, 56, 200]),  # red
-        ([86, 31, 4], [220, 88, 50]),  # blue
-        ([25, 146, 190], [62, 174, 250]),  # yellow
-        ([103, 86, 65], [145, 133, 128])  # gray
-    ]
-
-    #redBoundaries = [([17, 15, 100], [50, 56, 200])]
-    #lower = np.array([17, 15, 100])
-    #upper = np.array([50, 56, 200])
-
-    # grayBoundary = ([103, 86, 65], [145, 133, 128])
-    lower = np.array([103, 86, 65])
-    upper = np.array([145, 133, 128])
-    ######### Treshold #############3
-
-    #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    #blurred = cv2.GaussianBlur(img, (5, 5), 0)
-    cv2.imshow("Image with gaussianBlur", img)
-
-    #(T, thresh) = cv2.threshold(blurred, 155, 255, cv2.THRESH_BINARY)
-    (T, thresh) = cv2.threshold(img.astype(np.uint8), 100, 255, cv2.THRESH_BINARY)
-    cv2.imshow("Threshold Binary", thresh)
-
-    #(T, threshInv) = cv2.threshold(blurred, 155, 255, cv2.THRESH_BINARY_INV)
-    (T, threshInv) = cv2.threshold(img.astype(np.uint8), 100, 255, cv2.THRESH_BINARY_INV)
-
-    cv2.imshow("Threshold Binary Inverse", threshInv)
-
-    coins = cv2.bitwise_and(img, img, mask =threshInv)
-    cv2.imshow("Coins", coins)
-    #cv2.waitKey(0)
-
-    # find the colors within the specified boundaries and apply
-    # the mask
-    #mask = cv2.inRange(img, lower, upper)
-    #output = cv2.bitwise_and(img, img, mask = mask)
-
-    # Blur the mask
-    #bmask = cv2.GaussianBlur(mask, (5,5),0)
-
-    # Take the moments to get the centroid
-    moments = cv2.moments(coins)  #bmask)
-    m00 = moments['m00']
-    print m00
-    centroid_x, centroid_y = None, None
-    if m00 != 0:
-        print "m00 != 0"
-        centroid_x = int(moments['m10']/m00)
-        centroid_y = int(moments['m01']/m00)
-
-    # Assume no centroid
-    ctr = (-1,-1)
-
-    # Use centroid if it exists
-    if centroid_x != None and centroid_y != None:
-
-        ctr = (centroid_x, centroid_y)
-
-        # Put black circle in at centroid in image
-        centerCircle_Color = (62, 174, 250)
-        cv2.circle(img, ctr, 4, centerCircle_Color)
-
-    # Display full-color image
-    WINDOW_NAME = "ObjectFinder"
-    #cv2.imshow(WINDOW_NAME, img)
-    #cv2.waitKey(0)
-
-    # Force image display, setting centroid to None on ESC key input
-    if cv2.waitKey(1) & 0xFF == 27:
-        ctr = None
-
-    # want to return position of centroid in picture
-
-    return img, ctr # we return the image with the centroid center -->ctr = (centroid_x, centroid_y)
-    # want to calculate average distance to this centroid as well
-
 ##################Point Cloud CODE################################
 
 ply_header = '''ply
@@ -352,8 +267,59 @@ def point_cloud(disparity_image, image_left, focal_length):
 
     #return result # ply_string
 
+
+def findBiggestObject(img, pts_que_center):
+    blurred = cv2.GaussianBlur(img, (11, 11), 0)
+    mask = blurred
+    mask = cv2.erode(mask, None, iterations=2)
+    mask = cv2.dilate(mask, None, iterations=2)
+
+    # find contours in the mask and initialize the current
+	# (x, y) center of the ball
+    cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+    center = None
+
+    # only proceed if at least one contour was found
+    if len(cnts) > 0:
+        # find the largest contour in the mask, then use
+        # it to compute the minimum enclosing circle and
+        # centroid
+        c = max(cnts, key=cv2.contourArea)
+        ((x, y), radius) = cv2.minEnclosingCircle(c)
+        M = cv2.moments(c)
+        center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+
+        # only proceed if the radius meets a minimum size
+        if radius > 40: # works as a treshold
+            # draw the circle and centroid on the frame,
+            # then update the list of tracked points
+            cv2.circle(img, (int(x), int(y)), int(radius),
+                (0, 255, 255), 2)
+            cv2.circle(img, center, 5, (0, 0, 255), -1)
+
+    # update the points queue
+    pts_que_center.appendleft(center)
+
+    # loop over the set of tracked points
+    for i in xrange(1, len(pts_que_center)):
+        # if either of the tracked points are None, ignore
+        # them
+        if pts_que_center[i - 1] is None or pts_que_center[i] is None:
+            continue
+
+        # otherwise, compute the thickness of the line and
+        # draw the connecting lines
+        thickness = int(np.sqrt(15/ float(i + 1)) * 2.5)
+        cv2.line(img, pts_que_center[i - 1], pts_que_center[i], (255, 255, 255), thickness)
+
+    return img, center
+
+
 ### Main method
 def Main():
+
+    pts_que_center = deque(maxlen=15)
+
     with Vimba() as vimba:
         system = vimba.getSystem()
         system.runFeatureCommand("GeVDiscoveryAllOnce")
@@ -493,18 +459,72 @@ def Main():
 
                 elapsed_time = time.time() - start_time
                 if (elapsed_time > dispTime ):
-                    print "creating disparity"
+                    # print "creating disparity"
                     disparity_visual = disparityCalc(img1, img2, intrinsic_matrixL, intrinsic_matrixR, distCoeffL, distCoeffR)
 
-                    print "displaying disparity"
+                    ################################################################
+                    #proc
+                    # Erode to remove noise
+                    IMGbw_PrepcalcCentroid = proc.prepareDisparityImage_for_centroid(disparity_visual)
+
+                    # calculate the centers of the small "objects"
+                    image_withCentroids, centerCordinates = proc.findCentroids(IMGbw_PrepcalcCentroid)
+
+                    #cv2.imshow("image after finding centroids", image_withCentroids)
+
+                    centerCordinates = np.asarray(centerCordinates) # make list centerCordinates into numpy array
+
+                    imageDraw, pixelSizeOfObject = proc.drawStuff(centerCordinates, disparity_visual.copy())
+
+                    object_real_world_mm = 500 # 1000mm = 1 meter
+                    distance_mm = proc.calcDistanceToKnownObject(object_real_world_mm, pixelSizeOfObject)
+                    # calculate an estimate of distance
+
+                    print "distance_mm"
+                    print distance_mm
+
+                    objectCenter = proc.getAverageCentroidPosition(centerCordinates)
+
+                    ####### make image that buffers "old" centerpoints, and calculate center of the biggest centroid -- hopefully that is the biggest object
+                    imgStaaker, center = findBiggestObject(disparity_visual.copy(), pts_que_center)
+
+                     # update the points queue
+                    # pts_que_center.appendleft(objectCenter)
+                    #pts_que_center.appendleft(center)
+
+                    ######
+
+                    #cv2.imshow("image after finding minimum bounding rectangle of object", imageDraw )
+
+                    #draw the new center in white
+                    centerCircle_Color = (255, 255, 255)
+                    cv2.circle(imgStaaker, objectCenter, 10, centerCircle_Color)
+
+                    cv2.imshow("image staaker", imgStaaker )
+
+                    #cv2.imshow('center object', disparity_visual)
+
+                    # get direction of objects
+
+                    Xpos = proc.findXposMessage(objectCenter)
+                    print "Xpos"
+                    print Xpos
+
+                    XposCenterBiggestObject = proc.findXposMessage(center)
+                    print "XposCenterBiggestObject"
+                    print XposCenterBiggestObject
+
+                    #######################################################################################
+
+                    # "displaying disparity"
                     #cv2.imshow("disparityMovie", disparity_visual)
                     dispTime = (time.time() - start_time) + 0.0035
 
                     # Imporve disparity image, by using a scale sin(20) to sin(50) --> becouse the camera is tilted 35 or 45 degrees?
                     # make an array of values from sin(20) to sin(50)
                     disparity_visual_adjusted = camereaAngleAdjuster(disparity_visual)
-                    cv2.imshow("disparity_visual_adjusted", disparity_visual_adjusted)
-                    #cv2.waitKey(0)
+                    #cv2.imshow("disparity_visual_adjusted", disparity_visual_adjusted)
+
 
                     # apply mask so that disparityDisctance() don`t divide by zero
                     #disparity_visual = disparity_visual  #.astype(np.float32) / 16.0
@@ -517,8 +537,7 @@ def Main():
 
                     # calculate the Depth_map
                     Depth_map = disparityDisctance(disparity_visual, focal_length, base_offset)
-                    print "displaying Depth_map"
-                    cv2.imshow("Depth_map", Depth_map)
+                    #cv2.imshow("Depth_map", Depth_map)
 
 
                     # save the images that has been used to create disparity
@@ -528,9 +547,12 @@ def Main():
 
                     imgNameString_DISTANCE = folderName_saveImages + "/" + toktName + "_Depth_map_" + str(pairNumber) + ".jpg"
 
+                    imgNameString_DISPARITY = folderName_saveImages + "/" + toktName + "_Disp_map_" + str(pairNumber) + ".jpg"
+
                     # writing the images to diske
                     cv2.imwrite(imgNameString_L, img1)
                     cv2.imwrite(imgNameString_R, img2)
+                    cv2.imwrite(imgNameString_DISTANCE, Depth_map)
                     cv2.imwrite(imgNameString_DISTANCE, Depth_map)
 
 
@@ -545,10 +567,7 @@ def Main():
                     elapsed_time = time.time() - start_time
                     '''
 
-                    # FINDING the object
-                    centroid_img, ctr = trackObject(Depth_map)
-
-                    cv2.imshow("centroid_img", centroid_img)
+                    #cv2.imshow("centroid_img", centroid_img)
 
                     # Compare the 3 parts, (Left, Center, Right) with each other to find in what area the object is.
                     #returnValue = compare3windows(depthMap, somthing )
@@ -604,62 +623,3 @@ if __name__ == '__main__':
     cProfile.run('Main()')
 
 # todo: filter out everythong further away than 2 meter to test
-
-'''
-h, w = img1.shape[:2]
-diff = (6,6,6)
-mask = np.zeros((h+2,w+2),np.uint8)
-window_size = 3
-min_disp = 16
-num_disp = 112-min_disp
-
-print "generating 3d point cloud..."
-points = cv2.reprojectImageTo3D(disp, Mat)
-colors = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
-mask = disp > disp.min()
-cv2.imshow('left', img1)
-disparity = (disparity_visual-min_disp)/num_disp
-cv2.imshow('disparity with filter', disparity)
-'''
-
-'''
-img_L = cv2.pyrDown( cv2.imread(Li) )
-img_R = cv2.pyrDown( cv2.imread(Ri) )
-# comeents and shit
-h, w = img_L.shape[:2]
-diff=(6,6,6)
-mask=np.zeros((h+2,w+2),np.uint8)
-window_size = 3
-min_disp = 16
-num_disp = 112-min_disp
-stereo = cv2.StereoSGBM(minDisparity = min_disp,
-    numDisparities = num_disp,
-    SADWindowSize = window_size,
-    uniquenessRatio = 10,
-    speckleWindowSize = 100,
-    speckleRange = 32,
-    disp12MaxDiff = 1,
-    P1 = 8*3*window_size**2,
-    P2 = 32*3*window_size**2,
-    fullDP = False
-)
-print "computing disparity..."
-disp = stereo.compute(img_L, img_R).astype(np.float32) / 16.0
-
-print "generating 3d point cloud..."
-h, w = img_L.shape[:2]
-f = 0.8*w                          # guess for focal length
-
-
-points = cv2.reprojectImageTo3D(disp, Mat)
-colors = cv2.cvtColor(img_L, cv2.COLOR_BGR2RGB)
-mask = disp > disp.min()
-cv2.imshow('left', img_L)
-disparity=(disp-min_disp)/num_disp
-cv2.imshow('disparity',disparity )
-b=6.50
-D=b*f/disp
-cv2.waitKey()
-cv.DestroyAllWindows()
-return D
-'''

@@ -12,7 +12,6 @@ python train.py --dataset data/digits.csv --model models/svm
 # to recognice numbers in a picture
 python classify.py --model models/svm.cpickle --image images/B21_A170.png
 
-
 # dependencies
 sklearn
 mahotas

@@ -301,11 +301,14 @@ def objectTreshold(leftImg, rightImage):
     matchesINT = len(matches)
     return matchesINT #acceptedINT
 
+def prepareDisparityImage_for_centroid(IMGbw):
+    IMGbw = cv2.erode(IMGbw, np.ones((4, 4)))
 
-
-
-
-
+    # DILATE white points...
+    IMGbw = cv2.dilate(IMGbw, np.ones((5, 5)))
+    IMGbw = cv2.erode(IMGbw, np.ones((4, 4)))
+    IMGbw = cv2.dilate(IMGbw, np.ones((5, 5)))
+    return IMGbw
 
 def mainProcess():
 
@@ -324,22 +327,14 @@ def mainProcess():
     filenameLeft = r"testImages\obstacle1\RightCameraRun4_179.png"
     filenameRight = r"testImages\obstacle1\LeftCameraRun4_179.png"
 
-
-
     IMG_L = cv2.imread(filenameLeft)
     IMG_R = cv2.imread(filenameRight)
 
-
     # Erode to remove noise
-    IMGbw = cv2.erode(IMGbw, np.ones((4, 4)))
-
-    # DILATE white points...
-    IMGbw = cv2.dilate(IMGbw, np.ones((5, 5)))
-    #IMGbw = cv2.erode(IMGbw, np.ones((4, 4)))
-    #IMGbw = cv2.dilate(IMGbw, np.ones((5, 5)))
+    IMGbw_PrepcalcCentroid = prepareDisparityImage_for_centroid(IMGbw)
 
     # calculate the centers of the small "objects"
-    image, centerCordinates = findCentroids(IMGbw)
+    image, centerCordinates = findCentroids(IMGbw_PrepcalcCentroid)
 
     cv2.imshow("image after finding centroids", image)
     cv2.waitKey(0)
