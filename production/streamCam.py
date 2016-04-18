@@ -315,12 +315,80 @@ def findBiggestObject(img, pts_que_center, radiusTresh=40):
     return img, center
 
 
+def trackGrowingObject(img, pts_que_center_list, pts_que_radius_list, radiusTresh=20):
+    # pts_que_center_list
+    #pts_que_center = deque(maxlen=15)
+
+    blurred = cv2.GaussianBlur(img, (11, 11), 0)
+    mask = blurred
+    mask = cv2.erode(mask, None, iterations=2)
+    mask = cv2.dilate(mask, None, iterations=2)
+
+    # find contours in the mask and initialize the current
+	# (x, y) center of the ball
+    cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+    center = None
+
+    # only proceed if at least one contour was found
+    if len(cnts) > 0:
+        # find the 5 largest contours in the mask, then use
+        # it to compute the minimum enclosing circle and
+        # centroid
+        c = max(cnts, key=cv2.contourArea)
+        c_list = sorted(cnts,cmp=None,key=cv2.contourArea, reverse=True)
+        maxNumber = len(pts_que_center_list)
+        for j in xrange(1, len(c_list)):
+            if j < maxNumber:
+                #pts_que_center_list[j] = c_list[j]
+                ((x, y), radius) = cv2.minEnclosingCircle(c)
+                M = cv2.moments(c_list[j])
+                center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+                pts_que_center_list[j].appendleft(center)
+                pts_que_radius_list[j].appendleft(radius)
+
+                # only proceed if the radius meets a minimum size
+                if radius > radiusTresh: # works as a treshold
+                    # draw the circle and centroid on the frame,
+                    # then update the list of tracked points
+                    cv2.circle(img, (int(x), int(y)), int(radius),
+                        (0, 255, 255), 2)
+                    cv2.circle(img, center, 5, (255, 255, 255), -1)
+
+
+
+        #((x, y), radius) = cv2.minEnclosingCircle(c)
+        #M = cv2.moments(c)
+        #center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+
+
+
+    # update the points queue
+    #pts_que_center_list[0].appendleft(center)
+
+    # loop over the set of tracked points
+    for j in xrange(1, len(pts_que_center_list)):
+        for i in xrange(1, len(pts_que_center_list[j])):
+            # if either of the tracked points are None, ignore
+            # them
+            if pts_que_center_list[j][i - 1] is None or pts_que_center_list[j][i] is None:
+                continue
+
+            # otherwise, compute the thickness of the line and
+            # draw the connecting lines
+            thickness = int(np.sqrt(15/ float(i + 1)) * 2.5)
+            cv2.line(img, pts_que_center_list[j][i - 1], pts_que_center_list[j][i], (255, 255, 255), thickness)
+
+    return img
+
+
+
 ### Main method
 def Main():
 
     pts_que_center = deque(maxlen=15)
     # tresh value
     pts_que_center_list = [deque(maxlen=10), deque(maxlen=10), deque(maxlen=10), deque(maxlen=10), deque(maxlen=10)] # list holds 5 elements
+    pts_que_radius_list = [deque(maxlen=10), deque(maxlen=10), deque(maxlen=10), deque(maxlen=10), deque(maxlen=10)]
 
     # tuning parameters
     radiusTresh = 40
@@ -427,9 +495,6 @@ def Main():
         # pairNumber for saving images that has been used for creating disparity
         pairNumber = 0
 
-
-
-
         while 1:
             # get status of camera 1
             #time.sleep(1)
@@ -499,6 +564,9 @@ def Main():
                     ####### make image that buffers "old" centerpoints, and calculate center of the biggest centroid -- hopefully that is the biggest object
                     imgStaaker, center = findBiggestObject(disparity_visual.copy(), pts_que_center, radiusTresh=radiusTresh)
 
+
+                    imgGrowing = trackGrowingObject(disparity_visual.copy(), pts_que_center_list, pts_que_radius_list, radiusTresh=radiusTresh)
+
                      # update the points queue
                     # pts_que_center.appendleft(objectCenter)
                     #pts_que_center.appendleft(center)
@@ -512,6 +580,7 @@ def Main():
                     cv2.circle(imgStaaker, objectCenter, 10, centerCircle_Color)
 
                     cv2.imshow("image staaker", imgStaaker )
+                    cv2.imshow("image imgGrowing", imgGrowing )
 
                     #cv2.imshow('center object', disparity_visual)
 
