@@ -324,7 +324,8 @@ def Main():
 
     # tuning parameters
     radiusTresh = 40
-
+    folderName_saveImages = "savedImages"
+    toktName = "tokt1"
 
     # parameters
     #b:= base offset, (the distance *between* your cameras)
@@ -335,7 +336,9 @@ def Main():
     focal_length = (fx*35)/1360
     #Distance_map = (base_offset*focal_length)/disparity_visual
 
-
+      # Load camerea parameters
+    # load calibration parameters
+    [intrinsic_matrixL, intrinsic_matrixR, distCoeffL, distCoeffR] = disp.loadCameraParameters()
 
 
     with Vimba() as vimba:
@@ -422,12 +425,7 @@ def Main():
         dispTime = 0.3
         # pairNumber for saving images that has been used for creating disparity
         pairNumber = 0
-        folderName_saveImages = "savedImages"
-        toktName = "tokt1"
 
-        # Load camerea parameters
-        # load calibration parameters
-        [intrinsic_matrixL, intrinsic_matrixR, distCoeffL, distCoeffR] = disp.loadCameraParameters()
 
 
 
