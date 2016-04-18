@@ -322,8 +322,18 @@ def Main():
     # tresh value
     pts_que_center_list = [deque(maxlen=10), deque(maxlen=10), deque(maxlen=10), deque(maxlen=10), deque(maxlen=10)] # list holds 5 elements
 
-
+    # tuning parameters
     radiusTresh = 40
+
+
+    # parameters
+    #b:= base offset, (the distance *between* your cameras)
+    base_offset = 30.5
+
+    #f:= focal length of camera,
+    fx = 2222
+    focal_length = (fx*35)/1360
+    #Distance_map = (base_offset*focal_length)/disparity_visual
 
 
 
@@ -419,13 +429,7 @@ def Main():
         # load calibration parameters
         [intrinsic_matrixL, intrinsic_matrixR, distCoeffL, distCoeffR] = disp.loadCameraParameters()
 
-        #b:= base offset, (the distance *between* your cameras)
-        base_offset = 30.5
 
-        #f:= focal length of camera,
-        fx = 2222
-        focal_length = (fx*35)/1360
-        #Distance_map = (base_offset*focal_length)/disparity_visual
 
         while 1:
             # get status of camera 1
