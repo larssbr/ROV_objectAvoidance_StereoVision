@@ -326,6 +326,7 @@ def Main():
     radiusTresh = 40
     folderName_saveImages = "savedImages"
     toktName = "tokt1"
+    object_real_world_mm = 500 # 1000mm = 1 meter to calculate distance to a known object.
 
     # parameters
     #b:= base offset, (the distance *between* your cameras)
@@ -486,7 +487,7 @@ def Main():
 
                     imageDraw, pixelSizeOfObject = proc.drawStuff(centerCordinates, disparity_visual.copy())
 
-                    object_real_world_mm = 500 # 1000mm = 1 meter
+                    #object_real_world_mm = 500 # 1000mm = 1 meter
                     distance_mm = proc.calcDistanceToKnownObject(object_real_world_mm, pixelSizeOfObject)
                     # calculate an estimate of distance
 
