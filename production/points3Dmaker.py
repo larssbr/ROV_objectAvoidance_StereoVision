@@ -153,6 +153,7 @@ def point_cloud(disparity_image, image_left, focal_length):
                     [0, -1, 0, h / 2],
                     [0, 0, focal_length, 0],
                     [0, 0, 0, 1]])
+    '''
 
     # This is replaced because my results were always bad. Estimates are
     # taken from the OpenCV samples.
@@ -194,17 +195,10 @@ def point_cloud(disparity_image, image_left, focal_length):
                 [0, 0, 0, -focal_length],
                 [0, 0, 1, 0]])
 
-
+    '''
     points = cv2.reprojectImageTo3D(disparity_image, Q)
 
-
-
     # get distance to obeject here
-
-
-
-
-
 
 
     colors = cv2.cvtColor(image_left, cv2.COLOR_BGR2RGB)

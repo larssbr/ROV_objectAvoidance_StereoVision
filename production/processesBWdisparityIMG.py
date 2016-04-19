@@ -150,32 +150,48 @@ def drawStuff(centerCordinates, image):
     # http://opencvpython.blogspot.no/2012/06/contours-2-brotherhood.html
     # http://docs.opencv.org/3.1.0/dd/d49/tutorial_py_contour_features.html#gsc.tab=0pyth
    ############## creating a minimum rectangle around the object ######################
-    rect = cv2.minAreaRect(points=centerCordinates)
-    box = cv2.cv.BoxPoints(rect)
-    box = np.int0(box)
-    cv2.drawContours(image,[box],0,(255,255,255),2)
-
+    try:
+        rect = cv2.minAreaRect(points=centerCordinates)
+        box = cv2.cv.BoxPoints(rect)
+        box = np.int0(box)
+        cv2.drawContours(image,[box],0,(255,255,255),2)
+    except:
+        pass
     ########### circle around object #######3
 
-    (x, y),radius = cv2.minEnclosingCircle(centerCordinates)
-    center = (int(x),int(y))
-    radius = int(radius)
-    cv2.circle(image, center, radius, (255,255,255),2)
+    try:
+        (x, y),radius = cv2.minEnclosingCircle(centerCordinates)
+        center = (int(x),int(y))
+        radius = int(radius)
+        cv2.circle(image, center, radius, (255,255,255),2)
+    except:
+        pass
+
 
     ########### finding a elipse ##############
-
-    ellipse = cv2.fitEllipse(centerCordinates)
-    cv2.ellipse(image,ellipse,(255,255,255),2)
+    #if len(centerCordinates) > 5:  # need more than points than 5 to be able to run  cv2.fitEllipse
+    try:
+        ellipse = cv2.fitEllipse(centerCordinates)
+        cv2.ellipse(image,ellipse,(255,255,255),2)
+    except:
+        pass
 
     ##### fitting a line ###########
 
-    rows,cols = image.shape[:2]
-    [vx,vy,x,y] = cv2.fitLine(points=centerCordinates, distType=cv2.cv.CV_DIST_L2, param =0, reps=0.01, aeps=0.01)
-    lefty = int((-x*vy/vx) + y)
-    righty = int(((cols-x)*vy/vx)+y)
-    cv2.line(image,(cols-1,righty),(0,lefty),(255,255,255),2)
+    try:
+        rows,cols = image.shape[:2]
+        [vx,vy,x,y] = cv2.fitLine(points=centerCordinates, distType=cv2.cv.CV_DIST_L2, param =0, reps=0.01, aeps=0.01)
+        lefty = int((-x*vy/vx) + y)
+        righty = int(((cols-x)*vy/vx)+y)
+        cv2.line(image,(cols-1,righty),(0, lefty),(255,255,255),2)
+    except:
+        pass
 
-    pixelSizeOfObject = radius  # an okay estimate for testing
+    try:
+        pixelSizeOfObject = radius  # an okay estimate for testing
+    except:
+        pixelSizeOfObject = 50
+
     return image, pixelSizeOfObject
 
 def calcDistanceToKnownObject(object_real_world_mm, pixelSizeOfObject):
@@ -274,7 +290,6 @@ def findCentroifOfObject(img):
 
 
     #cv2.destroyAllWindows()
-
 
 def objectTreshold(leftImg, rightImage):
     # Initiate SIFT detector
