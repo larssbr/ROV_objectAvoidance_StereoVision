@@ -42,7 +42,6 @@ def disparityCalc(img1, img2, intrinsic_matrixL, intrinsic_matrixR, distCoeffL, 
     disparity_visual = disparity_visual.astype(np.uint8)
     return disparity_visual
 
-
 def disparityDisctance(disparity_visual, focal_length, base_offset):
     #D:= Distance of point in real world,
     #b:= base offset, (the distance *between* your cameras)
@@ -228,6 +227,35 @@ def point_cloud(disparity_image, image_left, focal_length):
                     [0, -1, 0, h / 2],
                     [0, 0, focal_length, 0],
                     [0, 0, 0, 1]])
+
+    cxR = 637.64260
+    cyR = -33.60849
+    cxL = 681.42537
+    cyL = -22.08306
+
+    Cx = (cxR + cxL)/2
+    Cy = abs(cyR + cyL)/2
+
+    Tx = 30.5  #Tx is the distance between the two camera lens focal centers
+    a = 1/Tx   #, where Tx is the distance between the two camera lens focal centers
+    # b = (cx -cx)/tx I think this compensates for misalighmen
+
+    b = (cxR-cxL)/Tx
+    b = 0
+
+
+    Q = np.float32([[1, 0, 0, -Cx],
+                    [0, 1, 0,  -Cy],
+                    [0, 0, 0, focal_length],
+                    [0, 0, a, b]])
+
+    #Using the recomendations
+    focal_length = 0.8 * w
+    Q = np.float32([[1, 0, 0, -Cx],
+                [0, -1, 0,  Cy],
+                [0, 0, 0, -focal_length],
+                [0, 0, 1, 0]])
+
     points = cv2.reprojectImageTo3D(disparity_image, Q)
     colors = cv2.cvtColor(image_left, cv2.COLOR_BGR2RGB)
     mask = disparity_image > disparity_image.min()
@@ -302,7 +330,6 @@ def findBiggestObject(img, pts_que_center, pts_que_radius, radiusTresh=40):
         cv2.line(img, pts_que_center[i - 1], pts_que_center[i], (255, 255, 255), thickness)
 
     return img, biggestObjectCenter, pts_que_center_List, pts_que_radius_List
-
 
 def _displayDepth(name, mat):
     s = v = (np.ones(mat.shape) * 255).astype(np.uint8)
@@ -654,12 +681,7 @@ def methodEN(img1, img2):
     focal_length = (fx*35)/1360   # 1360 is the width of the image, 35 is width of old camera film in mm (10^-3 m)
     #Distance_map = (base_offset*focal_length)/disparity_visual
 
-
-
-
     ############
-
-
 
     elapsed_time = time.time() - start_time +1
     if (elapsed_time > dispTime ):
@@ -688,6 +710,8 @@ def methodEN(img1, img2):
 
         imageDraw, pixelSizeOfObject = proc.drawStuff(centerCordinates, disparity_visual.copy())
 
+        image_color_with_Draw, pixelSizeOfObject = proc.drawStuff(centerCordinates, img1.copy())
+
         # calculate the average center of this disparity
         objectAVGCenter = proc.getAverageCentroidPosition(centerCordinates)
 
@@ -701,6 +725,10 @@ def methodEN(img1, img2):
         print disparity_visual.dtype # float32
 
         cv2.imshow("disparity_visual", disparity_visual)
+        cv2.waitKey(0)
+
+        #print "drawing over color image"
+        cv2.imshow("image_color_with_Draw",image_color_with_Draw)
         cv2.waitKey(0)
 
 
@@ -725,10 +753,6 @@ def methodEN(img1, img2):
         #draw the new center in white
         centerCircle_Color = (255, 255, 255)
         cv2.circle(imgStaaker, objectAVGCenter, 10, centerCircle_Color)
-
-
-
-
 
         #######################
         dispTime = (time.time() - start_time) + 0.0035
@@ -845,11 +869,10 @@ def methodEN(img1, img2):
 
         CORD = (Xpath,Ypos)
         print  "path direction in pixel values" + str(CORD)
-        path_string = "path direction in pixel values" + str(CORD) + "\n"
-        print "saving pointCloud"
+        path_string = "path direction in pixel values" + str(CORD)
+        print "saving pathDir.txt"
         with open("pathDir.txt", 'w') as f:
-            f.write(path_string)
-
+            f.write(path_string + '\n')
 
         imgStaaker = proc.drawPath(Xpath, Ypos, imgStaaker)
 
@@ -869,6 +892,15 @@ def methodEN(img1, img2):
 
 
         #######################################################################################
+
+        print "creating point cloud"
+        point_cloud(disparity_visual, img1, focal_length)
+        #print "saving pointCloud"
+
+        #with open("set.ply", 'w') as f:
+        #   f.write(ply_string)
+
+
 
 
         '''
@@ -894,6 +926,9 @@ def main():
     # set the images you want to test here
     imgLeft = r"testImages\obstacle1\LeftCameraRun4_211.png"
     imgRight = r"testImages\obstacle1\RightCameraRun4_211.png"
+
+    imgLeft = r"savedImages\tokt1_L_786.jpg"
+    imgRight = r"savedImages\tokt1_R_786.jpg"
 
     frame_left = cv2.imread(imgLeft)
     frame_right = cv2.imread(imgRight)

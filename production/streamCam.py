@@ -303,6 +303,23 @@ def findBiggestObject(img, pts_que_center, pts_que_radius, radiusTresh=40):
 
     return img, biggestObjectCenter, pts_que_center_List, pts_que_radius_List
 
+def drawTrackedPoints(img,pts_que_center):
+        # loop over the set of tracked points
+    for i in xrange(1, len(pts_que_center)):
+        # if either of the tracked points are None, ignore
+        # them
+        if pts_que_center[i - 1] is None or pts_que_center[i] is None:
+            continue
+
+        # otherwise, compute the thickness of the line and
+        # draw the connecting lines
+        thickness = int(np.sqrt(15/ float(i + 1)) * 2.5)
+        cv2.line(img, pts_que_center[i - 1], pts_que_center[i], (255, 255, 255), thickness)
+
+    return img
+
+
+
 def trackGrowingObject(img, pts_que_center_list, pts_que_radius_list, radiusTresh=20):
     # pts_que_center_list
     #pts_que_center = deque(maxlen=15)
@@ -801,13 +818,10 @@ def Main():
                     #pushBroomAlgo_IMG = pushBroomAlgo(img1,img2,disparity_visual)
 
                     ####################### Calculations  #########################################
-                    #proc
 
                     # Imporve disparity image, by using a scale sin(20) to sin(50) --> becouse the camera is tilted 35 or 45 degrees?
                     # make an array of values from sin(20) to sin(50)
                     disparity_visual_adjusted = camereaAngleAdjuster(disparity_visual)
-
-                    #disparity_visual = disparity_visual.astype(np.float32)
 
                     # Erode to remove noise
                     IMGbw_PrepcalcCentroid = proc.prepareDisparityImage_for_centroid(disparity_visual)
@@ -820,6 +834,8 @@ def Main():
                     #disparity_visualBW = cv2.convertScaleAbs(disparity_visual)
 
                     imageDraw, pixelSizeOfObject = proc.drawStuff(centerCordinates, disparity_visual.copy())
+
+                    image_color_with_Draw, pixelSizeOfObject = proc.drawStuff(centerCordinates, img1.copy())
 
 
                     # calculate the average center of this disparity
@@ -835,6 +851,10 @@ def Main():
                     ####### make image that buffers "old" centerpoints, and calculate center of the biggest centroid -- hopefully that is the biggest object
                     imgStaaker, center, pts_que_center_List, pts_que_radius_List = findBiggestObject(disparity_visualBW.copy(), pts_que_center, pts_que_radius, radiusTresh=radiusTresh)
 
+
+                    # draw a lagging of the objects center
+                    image_color_with_Draw = drawTrackedPoints(img1.copy(), pts_que_center_List)
+
                     #cv2.imshow("image after finding minimum bounding rectangle of object", imageDraw )
 
                     #draw the new center in white
@@ -844,9 +864,7 @@ def Main():
                     #######################
                     dispTime = (time.time() - start_time) + 0.0035
 
-
                     #cv2.imshow("disparity_visual_adjusted", disparity_visual_adjusted)
-
 
                     # apply mask so that disparityDisctance() don`t divide by zero
                     #disparity_visual = disparity_visual  #.astype(np.float32) / 16.0
@@ -927,9 +945,10 @@ def Main():
                     CORD = (Xpath,Ypos)
                     disparity_visualBW = proc.drawPath(Xpath,Ypos, disparity_visualBW)
 
+                    #pts_que_center_List
+
 
                     # save the planed path
-                    CORD = (Xpath,Ypos)
                     print  "path direction in pixel values" + str(CORD)
                     path_string = "path direction in pixel values" + str(CORD) + "\n"
                     print "saving pointCloud"
@@ -951,9 +970,6 @@ def Main():
                     cv2.imwrite(imgNameString_DISTANCE, Depth_map)
                     cv2.imwrite(imgNameString_DISPARITY, disparity_visual)
 
-
-
-
                     ############### DISPLAY IMAGES HERE TO the USER ############################
 
                     #if you want to se left and right image
@@ -969,6 +985,10 @@ def Main():
 
                     # if you want to view the center of object
                     cv2.imshow("disparity_visualBW disparity_visualBW", disparity_visualBW)
+
+                    #print "drawing over color image"
+                    cv2.imshow("color image with drawings", image_color_with_Draw)
+
 
                     # if display disparity_visual_adjusted
                     #cv2.imshow("disparity_visual_adjusted", disparity_visual_adjusted)
@@ -994,8 +1014,6 @@ def Main():
                     # TODO save pointclouds at an acaptable timefrequency
                     elapsed_time = time.time() - start_time
                     '''
-
-                    #cv2.imshow("centroid_img", centroid_img)
 
                 ##################### END PROGRAM CODE ############################################
 
@@ -1038,5 +1056,3 @@ if __name__ == '__main__':
 
 
     # Main()
-
-# todo: filter out everythong further away than 2 meter to test
