@@ -215,6 +215,18 @@ def findXposMessage(objectCenter):
 
     return Xpos
 
+def findYposMessage(objectCenter):
+    cx, cy = objectCenter
+    # make new "coordinate system"
+    middleY = 1024/2 # 512
+
+    if cy < middleY :
+        Ypos = - (middleY - cx) # - 50 is a little to the left
+    else:
+        Ypos = cx - middleY
+
+    return Ypos
+
 # Not used
 def findCentroifOfObject(img):
     '''
