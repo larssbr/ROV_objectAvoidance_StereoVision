@@ -213,7 +213,7 @@ def findXposMessage(objectCenter):
     else:
         Xpos = cx - middleX
 
-    return Xpos
+    return -Xpos   # - to send the direction the rov should go, more intutive then where it should not go
 
 def findYposMessage(objectCenter):
     cx, cy = objectCenter
@@ -225,7 +225,7 @@ def findYposMessage(objectCenter):
     else:
         Ypos = cx - middleY
 
-    return Ypos
+    return -Ypos   # - to send the direction the rov should go, more intutive then where it should not go
 
 # Not used
 def findCentroifOfObject(img):
