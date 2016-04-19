@@ -59,17 +59,10 @@ def loadCameraParameters():
     distCoeffR = np.matrix([k1R, k2R, p1R, p2R, k3R])
 
 
-    # Parameters
-    #b:= base offset, (the distance *between* your cameras)
-    base_offset = 30.5
-
-    #f:= focal length of camera,
-    fx = 2222
-    focal_length = (fx*35)/1360 # 1360 is the width of the image, 35 is width of old camera film in mm (10^-3 m)
-    #Distance_map = (base_offset*focal_length)/disparity_visual
 
 
-    return intrinsic_matrixL, intrinsic_matrixR, distCoeffL, distCoeffR, focal_length, base_offset
+
+    return [intrinsic_matrixL, intrinsic_matrixR, distCoeffL, distCoeffR]
 
 def UndistortImage(image, intrinsic_matrix, distCoeff):
     # 1 Undistort the Image

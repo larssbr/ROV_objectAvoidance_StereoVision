@@ -68,9 +68,11 @@ def findCentroids(imgBW):
 
     #cv2.imshow("image after treshold", imgBW )
 
+    imgBWCopy = imgBW.astype(np.uint8)
 
     h, w = imgBW.shape[:2]
-    contours0, hierarchy = cv2.findContours( imgBW.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    #contours0, hierarchy = cv2.findContours( imgBW.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    contours0, hierarchy = cv2.findContours( imgBWCopy, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     moments = [cv2.moments(cnt) for cnt in contours0]
 
     # rounded the centroids to integer.
@@ -99,7 +101,9 @@ def findCentroids(imgBW):
 
 def getAverageCentroidPosition(centerCordinates):
     # taking the average of the centroids x and y poition to calculate and estimated  object CENTER
+    #centerCordinates = centerCordinates.astype(np.int)
     objectCenter = np.average(centerCordinates, axis=0)
+    #objectCenter = objectCenter.astype(np.uint8)
 
     print "objectCenter  : "
     print objectCenter #, objectCentery
@@ -361,7 +365,6 @@ def mainProcess():
 
     # calculate the centers of the small "objects"
     image, centerCordinates = findCentroids(IMGbw_PrepcalcCentroid)
-
     cv2.imshow("image after finding centroids", image)
     cv2.waitKey(0)
 
