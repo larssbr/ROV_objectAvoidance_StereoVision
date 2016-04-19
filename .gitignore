@@ -1,0 +1,18 @@
+### Example user template template
+### Example user template
+
+# IntelliJ project files
+.idea
+*.iml
+out
+gen
+# Created by .ignore support plugin (hsz.mobi)
+
+#development/testImages
+development/savedImages
+development/stereo.py
+
+production/set.ply
+production/savedImages
+production/testImages
+production/pathDir.txt
