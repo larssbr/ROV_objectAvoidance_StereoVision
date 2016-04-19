@@ -10,3 +10,7 @@ gen
 
 # folders
 savedImages
+
+# files
+set.ply
+pathDir.txt
