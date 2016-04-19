@@ -115,6 +115,7 @@ def getDisparity(imgLeft, imgRight, method="BM"):
         cv2.cv.FindStereoCorrespondenceBM(gray_left, gray_right, disparity, sbm)
         disparity_visual = cv2.cv.CreateMat(c, r, cv2.cv.CV_8U)
         cv2.cv.Normalize(disparity, disparity_visual, 0, 255, cv2.cv.CV_MINMAX)
+
         disparity_visual = np.array(disparity_visual)
 
     elif method == "SGBM":
@@ -131,6 +132,7 @@ def getDisparity(imgLeft, imgRight, method="BM"):
 
         disparity = sbm.compute(gray_left, gray_right)
         disparity_visual = cv2.normalize(disparity, alpha=0, beta=255, norm_type=cv2.cv.CV_MINMAX, dtype=cv2.cv.CV_8U)
+        #disp = cv2.normalize(sgbm.compute(ri_l, ri_r), alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
 
     return disparity_visual
 
