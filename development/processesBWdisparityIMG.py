@@ -101,20 +101,20 @@ def findCentroids(imgBW):
 
 def getAverageCentroidPosition(centerCordinates):
     # taking the average of the centroids x and y poition to calculate and estimated  object CENTER
-    objectCenter = np.average(centerCordinates, axis=0)
+    objectAVGCenter = np.average(centerCordinates, axis=0)
 
-    print "objectCenter  : "
-    print objectCenter #, objectCentery
-    #print objectCentery
+    print "objectAVGCenter  : "
+    print objectAVGCenter #, objectAVGCentery
+    #print objectAVGCentery
 
     # Unpack tuple.
-    (objectCenterX, objectCenterY) = objectCenter
+    (objectAVGCenterX, objectAVGCenterY) = objectAVGCenter
 
     # Display unpacked variables.
-    print(objectCenterX)
-    print(objectCenterY)
+    print(objectAVGCenterX)
+    print(objectAVGCenterY)
 
-    objectCenter = (int(objectCenterX), int(objectCenterY))
+    objectAVGCenter = (int(objectAVGCenterX), int(objectAVGCenterY))
 
     '''
     print "objectY  : "
@@ -145,7 +145,7 @@ def getAverageCentroidPosition(centerCordinates):
     '''
 
 
-    return objectCenter
+    return objectAVGCenter
 
 
 def drawStuff(centerCordinates, image):
@@ -189,8 +189,8 @@ def calcDistanceToKnownObject(object_real_world_mm, pixelSizeOfObject):
     distance_mm = (object_real_world_mm * focallength_mm) / object_image_sensor_mm
     return distance_mm
 
-def findXposMessage(objectCenter):
-    cx, cy = objectCenter
+def findXposMessage(objectAVGCenter):
+    cx, cy = objectAVGCenter
     # make new "coordinate system"
     middleX = 1360/2 # 680
 
@@ -353,18 +353,18 @@ def mainProcess():
     cv2.imshow("image after finding minimum bounding rectangle of object", imageDraw )
     cv2.waitKey(0)
 
-    objectCenter = getAverageCentroidPosition(centerCordinates)
+    objectAVGCenter = getAverageCentroidPosition(centerCordinates)
 
     #draw the new center in white
     centerCircle_Color = (255, 255, 255)
     #centerCircle_Color = (0, 0, 0)
-    cv2.circle(image, objectCenter, 10, centerCircle_Color)
+    cv2.circle(image, objectAVGCenter, 10, centerCircle_Color)
 
     cv2.imshow('center object', image)
     cv2.waitKey(0)
 
     # get direction
-    Xpos = findXposMessage(objectCenter)
+    Xpos = findXposMessage(objectAVGCenter)
     print "Xpos"
     print Xpos
 

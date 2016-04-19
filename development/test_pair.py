@@ -473,15 +473,15 @@ def main():
     cv2.imshow('disparity_visual_adjusted_Centroid2', disparity_visual_adjusted_Centroid2)
     0xFF & cv2.waitKey()
 
-    objectCenter = find.getAverageCentroidPosition(centerCordinates)
+    objectAVGCenter = find.getAverageCentroidPosition(centerCordinates)
 
     #Draw the new center in white and display image
     centerCircle_Color = (255, 255, 255)
-    cv2.circle(disparity_visual_adjusted_Centroid2, objectCenter, 10, centerCircle_Color)
+    cv2.circle(disparity_visual_adjusted_Centroid2, objectAVGCenter, 10, centerCircle_Color)
     cv2.imshow('center object', disparity_visual_adjusted_Centroid2)
     cv2.waitKey(0)
 
-    # USE objectCenter and disparity image to calculate distance to this point.
+    # USE objectAVGCenter and disparity image to calculate distance to this point.
 
     ########## NEED poincloud inforation to know distance to centroid
 
