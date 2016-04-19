@@ -713,10 +713,8 @@ def methodEN(img1, img2):
         #print "disp.dtype"
         #print disp.dtype # float32
 
-        cv2.imshow("disparity_visual normailized", disparity_visualBW)
-        cv2.waitKey(0)
-
-
+        #cv2.imshow("disparity_visual normailized", disparity_visualBW)
+        #cv2.waitKey(0)
 
 
         ####### make image that buffers "old" centerpoints, and calculate center of the biggest centroid -- hopefully that is the biggest object
@@ -727,6 +725,10 @@ def methodEN(img1, img2):
         #draw the new center in white
         centerCircle_Color = (255, 255, 255)
         cv2.circle(imgStaaker, objectAVGCenter, 10, centerCircle_Color)
+
+
+
+
 
         #######################
         dispTime = (time.time() - start_time) + 0.0035
@@ -800,6 +802,18 @@ def methodEN(img1, img2):
         print distance_mm
 
 
+        if Xpos>0:
+            print "turn right"
+            Xpath = 1100
+            print Xpath
+        else:
+            print "turn left"
+            Xpath = 100
+            print Xpath
+
+        CORD = (Xpath,Ypos)
+        imgStaaker = proc.drawPath(Xpath,Ypos, imgStaaker)
+
         ############## save the images that has been used to create disparity######################
         pairNumber = pairNumber + 1
         imgNameString_L = folderName_saveImages + "/" + toktName + "_L_" + str(pairNumber) + ".jpg"
@@ -828,8 +842,20 @@ def methodEN(img1, img2):
         # if you want to see the drawing on top of objects
         #cv2.imshow("image after finding minimum bounding rectangle of object", imageDraw )
 
+
+        CORD = (Xpath,Ypos)
+        print  "path direction in pixel values" + str(CORD)
+        path_string = "path direction in pixel values" + str(CORD) + "\n"
+        print "saving pointCloud"
+        with open("pathDir.txt", 'w') as f:
+            f.write(path_string)
+
+
+        imgStaaker = proc.drawPath(Xpath, Ypos, imgStaaker)
+
         # if you want to view the center of object
         cv2.imshow("image staaker", imgStaaker)
+        cv2.waitKey(0)
 
         # if display disparity_visual_adjusted
         #cv2.imshow("disparity_visual_adjusted", disparity_visual_adjusted)
@@ -872,8 +898,8 @@ def main():
     frame_left = cv2.imread(imgLeft)
     frame_right = cv2.imread(imgRight)
 
-    cv2.imshow("frame_left", frame_left)
-    cv2.imshow("frame_right", frame_right)
+    #cv2.imshow("frame_left", frame_left)
+    #cv2.imshow("frame_right", frame_right)
     cv2.waitKey(0)
 
     ########################################################################

@@ -79,7 +79,7 @@ def getDisparity(imgLeft, imgRight, method="BM"):
     print gray_left.shape
     c, r = gray_left.shape
     if method == "BM":
-        '''
+
         sbm = cv2.cv.CreateStereoBMState()
         disparity = cv2.cv.CreateMat(c, r, cv2.cv.CV_32F)
         sbm.SADWindowSize = 9
@@ -92,8 +92,9 @@ def getDisparity(imgLeft, imgRight, method="BM"):
         sbm.uniquenessRatio = 0
         sbm.speckleRange = 8
         sbm.speckleWindowSize = 0
-        '''
 
+
+        '''
         sbm = cv2.cv.CreateStereoBMState()
         disparity = cv2.cv.CreateMat(c, r, cv2.cv.CV_32F)
         sbm.SADWindowSize = 7 #9
@@ -107,6 +108,7 @@ def getDisparity(imgLeft, imgRight, method="BM"):
         sbm.speckleRange = 100 #8
         sbm.speckleWindowSize = 10  #0 # decides how many pixels must be close to each other for the algorithm to keep them
 
+        '''
 
 
         gray_left = cv2.cv.fromarray(gray_left)

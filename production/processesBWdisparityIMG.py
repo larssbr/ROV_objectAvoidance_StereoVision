@@ -150,6 +150,18 @@ def getAverageCentroidPosition(centerCordinates):
     return objectCenter
 
 
+def drawPath(Xpath,Ypos, image):
+    radius = 100
+    #(x,y) = centerCordinates
+
+    #center = (int(x),int(y))
+    radius = int(radius)
+    cv2.circle(image, (Xpath,Ypos), radius, (255,255,255), 7)
+
+
+
+    return image
+
 def drawStuff(centerCordinates, image):
     # http://opencvpython.blogspot.no/2012/06/contours-2-brotherhood.html
     # http://docs.opencv.org/3.1.0/dd/d49/tutorial_py_contour_features.html#gsc.tab=0pyth
