@@ -303,6 +303,17 @@ def findBiggestObject(img, pts_que_center, pts_que_radius, radiusTresh=40):
 
     return img, biggestObjectCenter, pts_que_center_List, pts_que_radius_List
 
+
+def trackPathPos(pts_que_path_center, xpos, ypos):
+    objectCenter = xpos, ypos
+    pts_que_path_center.appendleft(objectCenter)
+    pts_que_path_center_List = list(pts_que_path_center)
+
+    return pts_que_path_center_List
+
+
+
+
 def drawTrackedPoints(img,pts_que_center):
         # loop over the set of tracked points
     for i in xrange(1, len(pts_que_center)):
@@ -663,6 +674,8 @@ def Main():
 
     pts_que_center = deque(maxlen=15)
     pts_que_radius = deque(maxlen=15)
+
+    pts_que_path_center = deque(maxlen=15)
     # Tresh value
     pts_que_center_list = [deque(maxlen=10), deque(maxlen=10), deque(maxlen=10), deque(maxlen=10), deque(maxlen=10)] # list holds 5 elements
     pts_que_radius_list = [deque(maxlen=10), deque(maxlen=10), deque(maxlen=10), deque(maxlen=10), deque(maxlen=10)]
@@ -852,7 +865,7 @@ def Main():
                     imgStaaker, center, pts_que_center_List, pts_que_radius_List = findBiggestObject(disparity_visualBW.copy(), pts_que_center, pts_que_radius, radiusTresh=radiusTresh)
 
 
-                    # draw a lagging of the objects center
+                    # draw the lagging of the objects center
                     image_color_with_Draw = drawTrackedPoints(img1.copy(), pts_que_center_List)
 
                     #cv2.imshow("image after finding minimum bounding rectangle of object", imageDraw )
@@ -946,6 +959,10 @@ def Main():
                     disparity_visualBW = proc.drawPath(Xpath,Ypos, disparity_visualBW)
 
                     #pts_que_center_List
+                    pts_que_path_center_List = trackPathPos(pts_que_path_center, Xpath, Ypos)
+
+                    # draw the lagging of the path center
+                    image_color_with_Draw = drawTrackedPoints(img1.copy(), pts_que_path_center_List)
 
 
                     # save the planed path
