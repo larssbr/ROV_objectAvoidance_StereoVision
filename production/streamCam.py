@@ -69,7 +69,7 @@ def getImg(frame_data, frame):
 def sendUDPmessage(MESSAGE):
 
     # addressing information of target
-    UDP_IP = "127.0.0.1"
+    UDP_IP = "192.168.1.100"
     UDP_PORT = 1130
     #MESSAGE = "Hello, World!"
 
@@ -1003,8 +1003,6 @@ def Main():
                     if not isObstacleInfront_based_on_radius:
                         direction_string = "---"
 
-
-
                     draw.drawTextMessage(image_color_with_Draw, direction_string) # shows an arrow if we shoud go left or right
 
                     CORD = (Xpath,Ypos)
@@ -1065,7 +1063,7 @@ def Main():
                     cv2.imshow("disparity_visualBW disparity_visualBW", disparity_visualBW)
 
                     #print "drawing over color image"
-                    #cv2.imshow("color image with drawings", image_color_with_Draw)
+                    cv2.imshow("color image with drawings", image_color_with_Draw)
 
 
                     # if display disparity_visual_adjusted
