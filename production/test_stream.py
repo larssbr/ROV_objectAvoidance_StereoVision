@@ -8,6 +8,8 @@ import socket # to send UDP message to labview pc
 import disparityMapCalc as disp
 import processesBWdisparityIMG as proc
 from collections import deque # to keep track of a que of last poitions of the center of an object
+import datetime # to print the time to the textfile
+import drawing as draw
 
 
 #import stereo as stereo
@@ -644,7 +646,8 @@ def initialize():
     focal_length = (fx*35)/1360   # 1360 is the width of the image, 35 is width of old camera film in mm (10^-3 m)
     #Distance_map = (base_offset*focal_length)/disparity_visual
 
-
+def nothing(x):
+    pass
 
 def methodEN(img1, img2):
     start_time = time.time()
@@ -662,11 +665,36 @@ def methodEN(img1, img2):
     yMove_list = [deque(maxlen=10), deque(maxlen=10), deque(maxlen=10), deque(maxlen=10), deque(maxlen=10)]
 
     # tuning parameters
+    ##############################
+    trackBarWindowName = 'image'
+    cv2.namedWindow(trackBarWindowName) # name of window to TUNE
+
+    # create trackbars for color change
+    #cv2.createTrackbar('R',trackBarWindowName,0,255,nothing)
+    #cv2.createTrackbar('G',trackBarWindowName,0,255,nothing)
+    #cv2.createTrackbar('B',trackBarWindowName,0,255,nothing)
+    cv2.createTrackbar('radiusTresh', trackBarWindowName, 0, 100, nothing)
+
+    #radiusTresh = cv2.getTrackbarPos('radiusTresh', trackBarWindowName)
+
+    # create switch for ON/OFF functionality
+    switch = '0 : OFF \n1 : ON'
+    cv2.createTrackbar(switch, trackBarWindowName, 0, 1, nothing)
+
+
+    ##################################
+
+
     radiusTresh = 40
     folderName_saveImages = "savedImages"
     toktName = "tokt1"
     object_real_world_mm = 500 # 1000mm = 1 meter to calculate distance to a known object.
     isObsticleInFrontTreshValue = 1.7
+
+
+
+
+
 
     # Load camerea parameters
     # load calibration parameters
@@ -682,241 +710,254 @@ def methodEN(img1, img2):
     #Distance_map = (base_offset*focal_length)/disparity_visual
 
     ############
+    while(1):
+        elapsed_time = time.time() - start_time +1
+        if (elapsed_time > dispTime ):
+            # print "creating disparity"
+            disparity_visual = disparityCalc(img1, img2, intrinsic_matrixL, intrinsic_matrixR, distCoeffL, distCoeffR)
 
-    elapsed_time = time.time() - start_time +1
-    if (elapsed_time > dispTime ):
-        # print "creating disparity"
-        disparity_visual = disparityCalc(img1, img2, intrinsic_matrixL, intrinsic_matrixR, distCoeffL, distCoeffR)
+            # disparity_visual = pushBroomDispCalc(img1, img2, intrinsic_matrixL, intrinsic_matrixR, distCoeffL, distCoeffR)
+            #pushBroomAlgo_IMG = pushBroomAlgo(img1,img2,disparity_visual)
 
-        # disparity_visual = pushBroomDispCalc(img1, img2, intrinsic_matrixL, intrinsic_matrixR, distCoeffL, distCoeffR)
-        #pushBroomAlgo_IMG = pushBroomAlgo(img1,img2,disparity_visual)
+            ####################### Calculations  #########################################
+            #proc
 
-        ####################### Calculations  #########################################
-        #proc
+            # Imporve disparity image, by using a scale sin(20) to sin(50) --> becouse the camera is tilted 35 or 45 degrees?
+            # make an array of values from sin(20) to sin(50)
+            disparity_visual_adjusted = camereaAngleAdjuster(disparity_visual)
 
-        # Imporve disparity image, by using a scale sin(20) to sin(50) --> becouse the camera is tilted 35 or 45 degrees?
-        # make an array of values from sin(20) to sin(50)
-        disparity_visual_adjusted = camereaAngleAdjuster(disparity_visual)
+            disparity_visual = disparity_visual.astype(np.float32)
 
-        disparity_visual = disparity_visual.astype(np.float32)
+            # Erode to remove noise
+            IMGbw_PrepcalcCentroid = proc.prepareDisparityImage_for_centroid(disparity_visual)
 
-        # Erode to remove noise
-        IMGbw_PrepcalcCentroid = proc.prepareDisparityImage_for_centroid(disparity_visual)
+            # calculate the centers of the small "objects"
+            image_withCentroids, centerCordinates = proc.findCentroids(IMGbw_PrepcalcCentroid)
 
-        # calculate the centers of the small "objects"
-        image_withCentroids, centerCordinates = proc.findCentroids(IMGbw_PrepcalcCentroid)
+            centerCordinates = np.asarray(centerCordinates) # make list centerCordinates into numpy array
 
-        centerCordinates = np.asarray(centerCordinates) # make list centerCordinates into numpy array
+            imageDraw, pixelSizeOfObject = proc.drawStuff(centerCordinates, disparity_visual.copy())
 
-        imageDraw, pixelSizeOfObject = proc.drawStuff(centerCordinates, disparity_visual.copy())
+            image_color_with_Draw, pixelSizeOfObject = proc.drawStuff(centerCordinates, img1.copy())
 
-        image_color_with_Draw, pixelSizeOfObject = proc.drawStuff(centerCordinates, img1.copy())
+            # calculate the average center of this disparity
+            objectAVGCenter = proc.getAverageCentroidPosition(centerCordinates)
 
-        # calculate the average center of this disparity
-        objectAVGCenter = proc.getAverageCentroidPosition(centerCordinates)
+            #object_real_world_mm = 500 # 1000mm = 1 meter
+            distance_mm = proc.calcDistanceToKnownObject(object_real_world_mm, pixelSizeOfObject)
+            draw.drawTextMessage(image_color_with_Draw, str(distance_mm)) # draw the distance to object
+            # calculate an estimate of distance
+            #print "distance_mm"
+            #print distance_mm
 
-        #object_real_world_mm = 500 # 1000mm = 1 meter
-        distance_mm = proc.calcDistanceToKnownObject(object_real_world_mm, pixelSizeOfObject)
-        # calculate an estimate of distance
-        #print "distance_mm"
-        #print distance_mm
+            print "disparity_visual.dtype"
+            print disparity_visual.dtype # float32
 
-        print "disparity_visual.dtype"
-        print disparity_visual.dtype # float32
+            cv2.imshow("disparity_visual", disparity_visual)
+            #cv2.waitKey(0)
 
-        cv2.imshow("disparity_visual", disparity_visual)
-        cv2.waitKey(0)
+            #print "drawing over color image"
+            cv2.imshow("image_color_with_Draw",image_color_with_Draw)
+            #cv2.waitKey(0)
 
-        #print "drawing over color image"
-        cv2.imshow("image_color_with_Draw",image_color_with_Draw)
-        cv2.waitKey(0)
 
+            disparity_visualBW = cv2.convertScaleAbs(disparity_visual)
+            #and if you do : print(disparity.dtype) it shows : int16 and  it shows : uint8. so the type of the image has changed.
+
+            print "(res.dtype)"
+            print(disparity_visual.dtype)
 
-        disparity_visualBW = cv2.convertScaleAbs(disparity_visual)
-        #and if you do : print(disparity.dtype) it shows : int16 and  it shows : uint8. so the type of the image has changed.
+            #print "disp.dtype"
+            #print disp.dtype # float32
 
-        print "(res.dtype)"
-        print(disparity_visual.dtype)
+            #cv2.imshow("disparity_visual normailized", disparity_visualBW)
+            #cv2.waitKey(0)
+
+            # update radiusTresh with tuner
+            radiusTresh = cv2.getTrackbarPos('radiusTresh', trackBarWindowName)
+            ####### make image that buffers "old" centerpoints, and calculate center of the biggest centroid -- hopefully that is the biggest object
+            imgStaaker, center, pts_que_center_List, pts_que_radius_List = findBiggestObject(disparity_visualBW.copy(), pts_que_center, pts_que_radius, radiusTresh=radiusTresh)
 
-        #print "disp.dtype"
-        #print disp.dtype # float32
+            #cv2.imshow("image after finding minimum bounding rectangle of object", imageDraw )
 
-        #cv2.imshow("disparity_visual normailized", disparity_visualBW)
-        #cv2.waitKey(0)
+            #draw the new center in white
+            centerCircle_Color = (255, 255, 255)
+            cv2.circle(imgStaaker, objectAVGCenter, 10, centerCircle_Color)
 
+            #######################
+            dispTime = (time.time() - start_time) + 0.0035
 
-        ####### make image that buffers "old" centerpoints, and calculate center of the biggest centroid -- hopefully that is the biggest object
-        imgStaaker, center, pts_que_center_List, pts_que_radius_List = findBiggestObject(disparity_visualBW.copy(), pts_que_center, pts_que_radius, radiusTresh=radiusTresh)
 
-        #cv2.imshow("image after finding minimum bounding rectangle of object", imageDraw )
+            #cv2.imshow("disparity_visual_adjusted", disparity_visual_adjusted)
 
-        #draw the new center in white
-        centerCircle_Color = (255, 255, 255)
-        cv2.circle(imgStaaker, objectAVGCenter, 10, centerCircle_Color)
 
-        #######################
-        dispTime = (time.time() - start_time) + 0.0035
+            # apply mask so that disparityDisctance() don`t divide by zero
+            #disparity_visual = disparity_visual  #.astype(np.float32) / 16.0
+            #TODO: doobble check this--> i think i need it to not divide by zero
+            #min_disp = 1  # 16
+            #num_disp = 112-min_disp
+            #disparity_visual=(disparity_visual-min_disp)/num_disp
+            #disparity_visual_adjusted_fixed = (disparity_visual_adjusted -min_disp)/num_disp
 
+            # calculate the Depth_map
+            try:
+                Depth_map = disparityDisctance(disparity_visual, focal_length, base_offset)
+            except:
+                pass
 
-        #cv2.imshow("disparity_visual_adjusted", disparity_visual_adjusted)
+            #Depth_map_adjusted = disparityDisctance(disparity_visual_adjusted, focal_length, base_offset)
 
+            ################################# UDP #########################################
+            # Compare the 3 parts, (Left, Center, Right) with each other to find in what area the object is.
+            #returnValue = compare3windows(depthMap, somthing )
+            # Image ROI
+            ####
+            directionMessage = "status : "
+            #####
+            if isObsticleInFront(disparity_visual, isObsticleInFrontTreshValue): # if the treshold says there is somthing infront then change directions
+                #directionMessage = obstacleAvoidanceDirection(disparity_visual)
+
+                #directionMessage = "CALC"
+                directionMessage = directionMessage + str(0) + " "
+            else:  # if nothing is in front of camera, do not interupt the path
+                #directionMessage = directionMessage + "CONTINUE"
+                directionMessage = directionMessage + str(1) + " "
+
+            print "directionMessage"
+            print directionMessage
+
+
+            #Send position of dangerous objects. To avoid theese positions.
+            # this is for the average position of alle the picels the disparity captures.
+            Xpos = proc.findXposMessage(objectAVGCenter)
+            Ypos = proc.findYposMessage(objectAVGCenter)
+            print "Xpos"
+            print Xpos
+            #XposMessage = directionMessage + ' Xpos :'+ str(Xpos) +' Ypos :' + str(Ypos)
+            #############
+            centerPosMessage = 'Xpos : '+ str(Xpos) +'  Ypos : ' + str(Ypos)
+            Message = directionMessage + centerPosMessage
+            sendUDPmessage(Message)
+            #########
 
-        # apply mask so that disparityDisctance() don`t divide by zero
-        #disparity_visual = disparity_visual  #.astype(np.float32) / 16.0
-        #TODO: doobble check this--> i think i need it to not divide by zero
-        #min_disp = 1  # 16
-        #num_disp = 112-min_disp
-        #disparity_visual=(disparity_visual-min_disp)/num_disp
-        #disparity_visual_adjusted_fixed = (disparity_visual_adjusted -min_disp)/num_disp
+            XposCenterBiggestObject = proc.findXposMessage(center)
+            YposCenterBiggestObject = proc.findYposMessage(center)
+            print "XposCenterBiggestObject"
+            print XposCenterBiggestObject
+            #XposCenterBiggestObjectMessage = 'XposCenterBiggestObject :'+ str(XposCenterBiggestObject) +'   YposCenterBiggestObject :' + str(YposCenterBiggestObject)
+            ######## TODO: test this method under water
+            #centerPosMessage = 'Xpos : '+ str(XposCenterBiggestObject) +'  Ypos : ' + str(YposCenterBiggestObject)
+            #Message = directionMessage + centerPosMessage
+            #sendUDPmessage(Message)
+            ####
 
-        # calculate the Depth_map
-        try:
-            Depth_map = disparityDisctance(disparity_visual, focal_length, base_offset)
-        except:
-            pass
+            # Distances
+            print "distance_mm"
+            print distance_mm
 
-        #Depth_map_adjusted = disparityDisctance(disparity_visual_adjusted, focal_length, base_offset)
 
-        ################################# UDP #########################################
-        # Compare the 3 parts, (Left, Center, Right) with each other to find in what area the object is.
-        #returnValue = compare3windows(depthMap, somthing )
-        # Image ROI
-        ####
-        directionMessage = "status : "
-        #####
-        if isObsticleInFront(disparity_visual, isObsticleInFrontTreshValue): # if the treshold says there is somthing infront then change directions
-            #directionMessage = obstacleAvoidanceDirection(disparity_visual)
+            if Xpos>0:
+                print "turn right"
+                Xpath = 1100
+                print Xpath
+            else:
+                print "turn left"
+                Xpath = 100
+                print Xpath
 
-            #directionMessage = "CALC"
-            directionMessage = directionMessage + str(0) + " "
-        else:  # if nothing is in front of camera, do not interupt the path
-            #directionMessage = directionMessage + "CONTINUE"
-            directionMessage = directionMessage + str(1) + " "
+            CORD = (Xpath,Ypos)
+            imgStaaker = proc.drawPath(Xpath,Ypos, imgStaaker)
 
-        print "directionMessage"
-        print directionMessage
+            ############## save the images that has been used to create disparity######################
+            pairNumber = pairNumber + 1
+            imgNameString_L = folderName_saveImages + "/" + toktName + "_L_" + str(pairNumber) + ".jpg"
+            imgNameString_R = folderName_saveImages + "/" + toktName + "_R_" + str(pairNumber) + ".jpg"
 
+            imgNameString_DISTANCE = folderName_saveImages + "/" + toktName + "_Depth_map_" + str(pairNumber) + ".jpg"
 
-        #Send position of dangerous objects. To avoid theese positions.
-        # this is for the average position of alle the picels the disparity captures.
-        Xpos = proc.findXposMessage(objectAVGCenter)
-        Ypos = proc.findYposMessage(objectAVGCenter)
-        print "Xpos"
-        print Xpos
-        #XposMessage = directionMessage + ' Xpos :'+ str(Xpos) +' Ypos :' + str(Ypos)
-        #############
-        centerPosMessage = 'Xpos : '+ str(Xpos) +'  Ypos : ' + str(Ypos)
-        Message = directionMessage + centerPosMessage
-        sendUDPmessage(Message)
-        #########
+            imgNameString_DISPARITY = folderName_saveImages + "/" + toktName + "_Disp_map_" + str(pairNumber) + ".jpg"
 
-        XposCenterBiggestObject = proc.findXposMessage(center)
-        YposCenterBiggestObject = proc.findYposMessage(center)
-        print "XposCenterBiggestObject"
-        print XposCenterBiggestObject
-        #XposCenterBiggestObjectMessage = 'XposCenterBiggestObject :'+ str(XposCenterBiggestObject) +'   YposCenterBiggestObject :' + str(YposCenterBiggestObject)
-        ######## TODO: test this method under water
-        #centerPosMessage = 'Xpos : '+ str(XposCenterBiggestObject) +'  Ypos : ' + str(YposCenterBiggestObject)
-        #Message = directionMessage + centerPosMessage
-        #sendUDPmessage(Message)
-        ####
+            # writing the images to diske
+            cv2.imwrite(imgNameString_L, img1)
+            cv2.imwrite(imgNameString_R, img2)
+            cv2.imwrite(imgNameString_DISTANCE, Depth_map)
+            cv2.imwrite(imgNameString_DISPARITY, disparity_visual)
 
-        # Distances
-        print "distance_mm"
-        print distance_mm
 
+            # write the time theese images have been taken to a file
+            dateTime_string = unicode(datetime.datetime.now())
+            path_string = str(pairNumber) + " , " + str(dateTime_string)
+            print "saving timeImages.txt"
+            # timeImages tokt name must be added
+            timeTXTfileName = "timeImages_" + toktName + ".txt"
 
-        if Xpos>0:
-            print "turn right"
-            Xpath = 1100
-            print Xpath
-        else:
-            print "turn left"
-            Xpath = 100
-            print Xpath
+            with open(timeTXTfileName, 'w') as f:
+                f.write(path_string + '\n')
 
-        CORD = (Xpath,Ypos)
-        imgStaaker = proc.drawPath(Xpath,Ypos, imgStaaker)
+            ############### DISPLAY IMAGES HERE TO the USER ############################
 
-        ############## save the images that has been used to create disparity######################
-        pairNumber = pairNumber + 1
-        imgNameString_L = folderName_saveImages + "/" + toktName + "_L_" + str(pairNumber) + ".jpg"
-        imgNameString_R = folderName_saveImages + "/" + toktName + "_R_" + str(pairNumber) + ".jpg"
+            #if you want to se left and right image
+            #dispalyToUser(img1,img2)
 
-        imgNameString_DISTANCE = folderName_saveImages + "/" + toktName + "_Depth_map_" + str(pairNumber) + ".jpg"
+            # if you want to see disparity image
 
-        imgNameString_DISPARITY = folderName_saveImages + "/" + toktName + "_Disp_map_" + str(pairNumber) + ".jpg"
 
-        # writing the images to diske
-        cv2.imwrite(imgNameString_L, img1)
-        cv2.imwrite(imgNameString_R, img2)
-        cv2.imwrite(imgNameString_DISTANCE, Depth_map)
-        cv2.imwrite(imgNameString_DISPARITY, disparity_visual)
+            # if you want to see adjusted disparity image
 
-        ############### DISPLAY IMAGES HERE TO the USER ############################
+            # if you want to see the drawing on top of objects
+            #cv2.imshow("image after finding minimum bounding rectangle of object", imageDraw )
 
-        #if you want to se left and right image
-        #dispalyToUser(img1,img2)
 
-        # if you want to see disparity image
+            CORD = (Xpath,Ypos)
+            print  "path direction in pixel values" + str(CORD)
+            path_string = "path direction in pixel values" + str(CORD)
+            print "saving pathDir.txt"
+            with open("pathDir.txt", 'w') as f:
+                f.write(path_string + '\n')
 
+            imgStaaker = proc.drawPath(Xpath, Ypos, imgStaaker)
 
-        # if you want to see adjusted disparity image
+            # if you want to view the center of object
+            cv2.imshow(trackBarWindowName, imgStaaker)
+            #cv2.waitKey(0)
 
-        # if you want to see the drawing on top of objects
-        #cv2.imshow("image after finding minimum bounding rectangle of object", imageDraw )
+            # if display disparity_visual_adjusted
+            #cv2.imshow("disparity_visual_adjusted", disparity_visual_adjusted)
 
+            # if display depth map
+            #cv2.imshow("Depth_map", Depth_map)
 
-        CORD = (Xpath,Ypos)
-        print  "path direction in pixel values" + str(CORD)
-        path_string = "path direction in pixel values" + str(CORD)
-        print "saving pathDir.txt"
-        with open("pathDir.txt", 'w') as f:
-            f.write(path_string + '\n')
 
-        imgStaaker = proc.drawPath(Xpath, Ypos, imgStaaker)
+            #cv2.imshow("image imgGrowing", imgGrowing )
+            #cv2.imshow('center object', disparity_visual)
 
-        # if you want to view the center of object
-        cv2.imshow("image staaker", imgStaaker)
-        cv2.waitKey(0)
 
-        # if display disparity_visual_adjusted
-        #cv2.imshow("disparity_visual_adjusted", disparity_visual_adjusted)
+            #######################################################################################
 
-        # if display depth map
-        #cv2.imshow("Depth_map", Depth_map)
+            #print "creating point cloud"
+            #point_cloud(disparity_visual, img1, focal_length)
+            #print "saving pointCloud"
 
+            #with open("set.ply", 'w') as f:
+            #   f.write(ply_string)
 
-        #cv2.imshow("image imgGrowing", imgGrowing )
-        #cv2.imshow('center object', disparity_visual)
 
+            time.sleep(4)
 
-        #######################################################################################
+            '''
+            if (elapsed_time > plyTime):
+                print "creating point cloud"
+                point_cloud(disparity_visual, img1, focal_length)
+                # extend time
+                plyTime = (time.time() - start_time) + 4 #  elapsed_time = 2 seconds
 
-        print "creating point cloud"
-        point_cloud(disparity_visual, img1, focal_length)
-        #print "saving pointCloud"
+            # TODO save pointclouds at an acaptable timefrequency
+            elapsed_time = time.time() - start_time
+            '''
 
-        #with open("set.ply", 'w') as f:
-        #   f.write(ply_string)
+            #cv2.imshow("centroid_img", centroid_img)
 
-
-
-
-        '''
-        if (elapsed_time > plyTime):
-            print "creating point cloud"
-            point_cloud(disparity_visual, img1, focal_length)
-            # extend time
-            plyTime = (time.time() - start_time) + 4 #  elapsed_time = 2 seconds
-
-        # TODO save pointclouds at an acaptable timefrequency
-        elapsed_time = time.time() - start_time
-        '''
-
-        #cv2.imshow("centroid_img", centroid_img)
-
-    ##################### END PROGRAM CODE ############################################
+        ##################### END PROGRAM CODE ############################################
 
 
 ########
@@ -935,7 +976,7 @@ def main():
 
     #cv2.imshow("frame_left", frame_left)
     #cv2.imshow("frame_right", frame_right)
-    cv2.waitKey(0)
+    #cv2.waitKey(0)
 
     ########################################################################
     initialize()

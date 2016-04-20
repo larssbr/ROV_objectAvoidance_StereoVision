@@ -10,6 +10,8 @@ import socket # to send UDP message to labview pc
 import disparityMapCalc as disp
 import processesBWdisparityIMG as proc
 from collections import deque # to keep track of a que of last poitions of the center of an object
+import datetime
+import drawing as draw
 
 
 #import stereo as stereo
@@ -253,7 +255,17 @@ def point_cloud(disparity_image, image_left, focal_length):
 
     #return result # ply_string
 
-def findBiggestObject(img, pts_que_center, pts_que_radius, radiusTresh=40):
+def findBiggestObject(img, pts_que_center, radiusTresh, isObstacleInfront_based_on_radius):
+    width, height = img.shape[:2][::-1]
+
+    margin = 200
+    #img= img[margin:width-margin , 0 : height]
+    y1 = 0
+    y2 = height
+    x1 = margin
+    x2 = width-margin
+    img = img[y1:y2, x1:x2]
+
     blurred = cv2.GaussianBlur(img, (11, 11), 0)
     mask = blurred
     mask = cv2.erode(mask, None, iterations=2)
@@ -271,6 +283,8 @@ def findBiggestObject(img, pts_que_center, pts_que_radius, radiusTresh=40):
         # centroid
         c = max(cnts, key=cv2.contourArea)
         ((x, y), radius) = cv2.minEnclosingCircle(c)
+        print "radius is ##################"
+        print radius
         M = cv2.moments(c)
         biggestObjectCenter = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
 
@@ -281,12 +295,16 @@ def findBiggestObject(img, pts_que_center, pts_que_radius, radiusTresh=40):
             cv2.circle(img, (int(x), int(y)), int(radius),
                 (0, 255, 255), 2)
             cv2.circle(img, biggestObjectCenter, 5, (0, 0, 255), -1)
+            # set isObstacleInfront_based_on_radius to True
+            isObstacleInfront_based_on_radius = True
+        else:
+            isObstacleInfront_based_on_radius = False
 
     # update the points queue
     pts_que_center.appendleft(biggestObjectCenter)
-    pts_que_radius.appendleft(radius)
+    #pts_que_radius.appendleft(radius)
     pts_que_center_List = list(pts_que_center)
-    pts_que_radius_List = list(pts_que_radius)
+    #pts_que_radius_List = list(pts_que_radius)
 
 
     # loop over the set of tracked points
@@ -301,7 +319,7 @@ def findBiggestObject(img, pts_que_center, pts_que_radius, radiusTresh=40):
         thickness = int(np.sqrt(15/ float(i + 1)) * 2.5)
         cv2.line(img, pts_que_center[i - 1], pts_que_center[i], (255, 255, 255), thickness)
 
-    return img, biggestObjectCenter, pts_que_center_List, pts_que_radius_List
+    return img, biggestObjectCenter, pts_que_center_List, isObstacleInfront_based_on_radius
 
 
 def trackPathPos(pts_que_path_center, xpos, ypos):
@@ -311,11 +329,8 @@ def trackPathPos(pts_que_path_center, xpos, ypos):
 
     return pts_que_path_center_List
 
-
-
-
 def drawTrackedPoints(img,pts_que_center):
-        # loop over the set of tracked points
+    # loop over the set of tracked points
     for i in xrange(1, len(pts_que_center)):
         # if either of the tracked points are None, ignore
         # them
@@ -673,7 +688,7 @@ def pushBroomAlgo(img1,img2,disparity_visual):
 def Main():
 
     pts_que_center = deque(maxlen=15)
-    pts_que_radius = deque(maxlen=15)
+    #pts_que_radius = deque(maxlen=15)
 
     pts_que_path_center = deque(maxlen=15)
     # Tresh value
@@ -685,8 +700,9 @@ def Main():
     radiusTresh = 40
     folderName_saveImages = "savedImages"
     toktName = "tokt1"
-    object_real_world_mm = 500 # 1000mm = 1 meter to calculate distance to a known object.
+    object_real_world_mm = 1000 # 1000mm = 1 meter to calculate distance to a known object.
     isObsticleInFrontTreshValue = 1.7
+    isObstacleInfront_based_on_radius = False # assusme there is no objects in front when we start the program.
 
     # Load camerea parameters
     # load calibration parameters
@@ -850,23 +866,26 @@ def Main():
 
                     image_color_with_Draw, pixelSizeOfObject = proc.drawStuff(centerCordinates, img1.copy())
 
-
                     # calculate the average center of this disparity
                     objectAVGCenter = proc.getAverageCentroidPosition(centerCordinates)
 
                     #object_real_world_mm = 500 # 1000mm = 1 meter
                     distance_mm = proc.calcDistanceToKnownObject(object_real_world_mm, pixelSizeOfObject)
+                    #draw.drawTextMessage(image_color_with_Draw, str(distance_mm)) # draw the distance to object
+
                     # calculate an estimate of distance
                     #print "distance_mm"
                     #print distance_mm
 
                     disparity_visualBW = cv2.convertScaleAbs(disparity_visual)
                     ####### make image that buffers "old" centerpoints, and calculate center of the biggest centroid -- hopefully that is the biggest object
-                    imgStaaker, center, pts_que_center_List, pts_que_radius_List = findBiggestObject(disparity_visualBW.copy(), pts_que_center, pts_que_radius, radiusTresh=radiusTresh)
+                    imgStaaker, center, pts_que_center_List, isObstacleInfront_based_on_radius = \
+                    findBiggestObject(disparity_visualBW.copy(), pts_que_center, radiusTresh=radiusTresh, isObstacleInfront_based_on_radius=isObstacleInfront_based_on_radius)
 
 
                     # draw the lagging of the objects center
-                    image_color_with_Draw = drawTrackedPoints(img1.copy(), pts_que_center_List)
+                    #image_color_with_Draw = drawTrackedPoints(img1.copy(), pts_que_center_List)
+                    image_color_with_Draw = drawTrackedPoints(image_color_with_Draw.copy(), pts_que_center_List)
 
                     #cv2.imshow("image after finding minimum bounding rectangle of object", imageDraw )
 
@@ -895,45 +914,50 @@ def Main():
 
                     #Depth_map_adjusted = disparityDisctance(disparity_visual_adjusted, focal_length, base_offset)
 
-                    ################################# UDP #########################################
+                    ################################# UDP MESSAGE #########################################
                     # Compare the 3 parts, (Left, Center, Right) with each other to find in what area the object is.
                     #returnValue = compare3windows(depthMap, somthing )
                     # Image ROI
                     ####
                     directionMessage = "status : "
                     #####
-                    if isObsticleInFront(disparity_visual, isObsticleInFrontTreshValue): # if the treshold says there is somthing infront then change directions
+                    #if isObsticleInFront(disparity_visual, isObsticleInFrontTreshValue): # if the treshold says there is somthing infront then change directions
                         #directionMessage = obstacleAvoidanceDirection(disparity_visual)
-
+                    if isObstacleInfront_based_on_radius:
                         #directionMessage = "CALC"
-                        directionMessage = directionMessage + str(0) + " "
+                        directionMessage = directionMessage + str(1) + " "
                     else:  # if nothing is in front of camera, do not interupt the path
                         #directionMessage = directionMessage + "CONTINUE"
-                        directionMessage = directionMessage + str(1) + " "
+                        directionMessage = directionMessage + str(0) + " "
 
                     print "directionMessage"
                     print directionMessage
 
-
                     #Send position of dangerous objects. To avoid theese positions.
                     # this is for the average position of alle the picels the disparity captures.
-                    Xpos = proc.findXposMessage(objectAVGCenter)
-                    Ypos = proc.findYposMessage(objectAVGCenter)
-                    print "Xpos"
-                    print Xpos
+                    try:
+                        Xpos = proc.findXposMessage(objectAVGCenter)
+                        Ypos = proc.findYposMessage(objectAVGCenter)
+                        print "Xpos"
+                        print Xpos
+                    except:
+                        isObstacleInfront_based_on_radius = False
+
                     #XposMessage = directionMessage + ' Xpos :'+ str(Xpos) +' Ypos :' + str(Ypos)
                     #############
                     centerPosMessage = 'Xpos : '+ str(Xpos) +'  Ypos : ' + str(Ypos)
                     Message = directionMessage + centerPosMessage
                     sendUDPmessage(Message)
                     #########
-
-                    XposCenterBiggestObject = proc.findXposMessage(center)
-                    YposCenterBiggestObject = proc.findYposMessage(center)
-                    print "XposCenterBiggestObject"
-                    print XposCenterBiggestObject
+                    try:
+                        XposCenterBiggestObject = proc.findXposMessage(center)
+                        YposCenterBiggestObject = proc.findYposMessage(center)
+                        print "XposCenterBiggestObject"
+                        print XposCenterBiggestObject
+                    except:
+                        isObstacleInfront_based_on_radius = False
                     #XposCenterBiggestObjectMessage = 'XposCenterBiggestObject :'+ str(XposCenterBiggestObject) +'   YposCenterBiggestObject :' + str(YposCenterBiggestObject)
-                    ######## TODO: test this method under water
+
                     #centerPosMessage = 'Xpos : '+ str(XposCenterBiggestObject) +'  Ypos : ' + str(YposCenterBiggestObject)
                     #Message = directionMessage + centerPosMessage
                     #sendUDPmessage(Message)
@@ -943,17 +967,26 @@ def Main():
                     print "distance_mm"
                     print distance_mm
 
-
-                    if Xpos>0:
+                    if int(Xpos)>0:
                         print "turn right"
-                        direction_string = "turn RIGHT"
+                        #direction_string = "turn RIGHT"
+                        direction_string = "-->"
                         Xpath = 1100
                         print Xpath
-                    else:
+
+                    if int(Xpos)<0:
                         print "turn left"
-                        direction_string = "turn LEFT"
+                        #direction_string = "turn LEFT"
+                        direction_string = "<--"
                         Xpath = 100
                         print Xpath
+
+                    if not isObstacleInfront_based_on_radius:
+                        direction_string = "---"
+
+
+
+                    draw.drawTextMessage(image_color_with_Draw, direction_string) # shows an arrow if we shoud go left or right
 
                     CORD = (Xpath,Ypos)
                     disparity_visualBW = proc.drawPath(Xpath,Ypos, disparity_visualBW)
@@ -962,8 +995,8 @@ def Main():
                     pts_que_path_center_List = trackPathPos(pts_que_path_center, Xpath, Ypos)
 
                     # draw the lagging of the path center
-                    image_color_with_Draw = drawTrackedPoints(img1.copy(), pts_que_path_center_List)
-
+                    #image_color_with_Draw = drawTrackedPoints(img1.copy(), pts_que_path_center_List)
+                    image_color_with_Draw = drawTrackedPoints(image_color_with_Draw.copy(), pts_que_path_center_List)
 
                     # save the planed path
                     print  "path direction in pixel values" + str(CORD)
@@ -987,13 +1020,22 @@ def Main():
                     cv2.imwrite(imgNameString_DISTANCE, Depth_map)
                     cv2.imwrite(imgNameString_DISPARITY, disparity_visual)
 
+                    # write the time theese images have been taken to a file
+                    dateTime_string = unicode(datetime.datetime.now())
+                    path_string = str(pairNumber) + " , " + str(dateTime_string)
+                    print "saving timeImages.txt"
+                    # timeImages tokt name must be added
+                    timeTXTfileName = "timeImages_" + toktName + ".txt"
+
+                    with open(timeTXTfileName, 'w') as f:
+                        f.write(path_string + '\n')
+
                     ############### DISPLAY IMAGES HERE TO the USER ############################
 
                     #if you want to se left and right image
                     #dispalyToUser(img1,img2)
 
                     # if you want to see disparity image
-
 
                     # if you want to see adjusted disparity image
 
@@ -1019,8 +1061,6 @@ def Main():
 
 
                     #######################################################################################
-
-
                     '''
                     if (elapsed_time > plyTime):
                         print "creating point cloud"
