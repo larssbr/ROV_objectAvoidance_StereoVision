@@ -118,35 +118,6 @@ def getAverageCentroidPosition(centerCordinates):
 
     objectCenter = (int(objectCenterX), int(objectCenterY))
 
-    '''
-    print "objectY  : "
-    print  objecty
-
-    #ctrCenter = int(objectX), int(objecty)
-    ctrCenter = int(objecty), int(objectX)
-
-
-    objectX_max = np.ndarray.max(centerX)
-    objectX_min = np.ndarray.min(centerX)
-
-    objecty_min = np.ndarray.min(centerY)
-
-    objecty_max = np.ndarray.max(centerY)
-
-
-
-    print "objecty_min  : "
-    print  objecty_min
-    print "objecty_max  : "
-    print  objecty_max
-
-    print "objectX_max  : "
-    print objectX_max
-    print "objectX_min  : "
-    print objectX_min
-    '''
-
-
     return objectCenter
 
 

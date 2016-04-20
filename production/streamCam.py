@@ -796,14 +796,12 @@ def Main():
         start_time = time.time()
         # Setting the times for the first while loop
         plyTime= 2
-        dispTime = 0.3
+        dispTime = 0.35
         # pairNumber for saving images that has been used for creating disparity
         pairNumber = 0
 
         while 1:
             # get status of camera 1
-            #time.sleep(1)
-
             try:
                 frame1.queueFrameCapture()
                 success1 = True
@@ -819,7 +817,7 @@ def Main():
                 droppedframes1.append(framecount2)
                 success2 = False
 
-            # Set the "shutter speed" --> How long the camerea takes in light to make the image
+            # Set the "shutter speed" --> How long the camera takes in light to make the image
             #c0.runFeatureCommand("ExposureMode=Timed")   # ExposureMode = Timed # PieceWiseLinearHDR
             #c0.runFeatureCommand("ExposureAuto = Continuous")
 
@@ -867,7 +865,11 @@ def Main():
                     image_color_with_Draw, pixelSizeOfObject = proc.drawStuff(centerCordinates, img1.copy())
 
                     # calculate the average center of this disparity
-                    objectAVGCenter = proc.getAverageCentroidPosition(centerCordinates)
+                    try:
+                        objectAVGCenter = proc.getAverageCentroidPosition(centerCordinates)
+                    except:
+                        pass
+                        isObstacleInfront_based_on_radius = False
 
                     #object_real_world_mm = 500 # 1000mm = 1 meter
                     distance_mm = proc.calcDistanceToKnownObject(object_real_world_mm, pixelSizeOfObject)
@@ -891,7 +893,10 @@ def Main():
 
                     #draw the new center in white
                     centerCircle_Color = (255, 255, 255)
-                    cv2.circle(disparity_visualBW, objectAVGCenter, 10, centerCircle_Color)
+                    try:
+                        cv2.circle(disparity_visualBW, objectAVGCenter, 10, centerCircle_Color)
+                    except:
+                        pass
 
                     #######################
                     dispTime = (time.time() - start_time) + 0.0035
@@ -917,8 +922,23 @@ def Main():
                     ################################# UDP MESSAGE #########################################
                     # Compare the 3 parts, (Left, Center, Right) with each other to find in what area the object is.
                     #returnValue = compare3windows(depthMap, somthing )
-                    # Image ROI
-                    ####
+
+                    #Send position of dangerous objects. To avoid theese positions.
+                    # this is for the average position of alle the picels the disparity captures.
+                    try:
+                        Xpos = proc.findXposMessage(objectAVGCenter)
+                        Ypos = proc.findYposMessage(objectAVGCenter)
+                        print "Xpos"
+                        print Xpos
+                    except:
+                        isObstacleInfront_based_on_radius = False
+
+
+                    #XposMessage = directionMessage + ' Xpos :'+ str(Xpos) +' Ypos :' + str(Ypos)
+                    #############
+                    centerPosMessage = 'Xpos : '+ str(Xpos) +'  Ypos : ' + str(Ypos)
+
+
                     directionMessage = "status : "
                     #####
                     #if isObsticleInFront(disparity_visual, isObsticleInFrontTreshValue): # if the treshold says there is somthing infront then change directions
@@ -933,21 +953,10 @@ def Main():
                     print "directionMessage"
                     print directionMessage
 
-                    #Send position of dangerous objects. To avoid theese positions.
-                    # this is for the average position of alle the picels the disparity captures.
-                    try:
-                        Xpos = proc.findXposMessage(objectAVGCenter)
-                        Ypos = proc.findYposMessage(objectAVGCenter)
-                        print "Xpos"
-                        print Xpos
-                    except:
-                        isObstacleInfront_based_on_radius = False
 
-                    #XposMessage = directionMessage + ' Xpos :'+ str(Xpos) +' Ypos :' + str(Ypos)
-                    #############
-                    centerPosMessage = 'Xpos : '+ str(Xpos) +'  Ypos : ' + str(Ypos)
-                    Message = directionMessage + centerPosMessage
-                    sendUDPmessage(Message)
+                    Message = directionMessage + centerPosMessage # only send message if there is a obstacle in front off the viechle
+                    if isObstacleInfront_based_on_radius:
+                        sendUDPmessage(Message)
                     #########
                     try:
                         XposCenterBiggestObject = proc.findXposMessage(center)
@@ -1046,7 +1055,7 @@ def Main():
                     cv2.imshow("disparity_visualBW disparity_visualBW", disparity_visualBW)
 
                     #print "drawing over color image"
-                    cv2.imshow("color image with drawings", image_color_with_Draw)
+                    #cv2.imshow("color image with drawings", image_color_with_Draw)
 
 
                     # if display disparity_visual_adjusted
