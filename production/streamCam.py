@@ -292,9 +292,8 @@ def findBiggestObject(img, pts_que_center, radiusTresh, isObstacleInfront_based_
         if radius > radiusTresh: # works as a treshold
             # draw the circle and centroid on the frame,
             # then update the list of tracked points
-            cv2.circle(img, (int(x), int(y)), int(radius),
-                (0, 255, 255), 2)
-            cv2.circle(img, biggestObjectCenter, 5, (0, 0, 255), -1)
+            cv2.circle(img, (int(x), int(y)), int(radius), (255, 255, 255), 2)
+            cv2.circle(img, biggestObjectCenter, 5, (255, 255, 255), -1)
             # set isObstacleInfront_based_on_radius to True
             isObstacleInfront_based_on_radius = True
         else:
@@ -717,6 +716,17 @@ def Main():
     focal_length = (fx*35)/1360   # 1360 is the width of the image, 35 is width of old camera film in mm (10^-3 m)
     #Distance_map = (base_offset*focal_length)/disparity_visual
 
+    # open files to write to
+    pathDirFile = open("pathDir.txt", 'w')
+    #with open("pathDir.txt", 'w') as f:
+
+    timeTXTfileName = "timeImages_" + toktName + ".txt"
+    #with open(timeTXTfileName, 'w') as f:
+    timeTXTfile = open(timeTXTfileName, 'w')
+
+
+
+
     with Vimba() as vimba:
         system = vimba.getSystem()
         system.runFeatureCommand("GeVDiscoveryAllOnce")
@@ -1011,8 +1021,8 @@ def Main():
                     print  "path direction in pixel values" + str(CORD)
                     path_string = "path direction in pixel values" + str(CORD) + "\n"
                     print "saving pointCloud"
-                    with open("pathDir.txt", 'w') as f:
-                        f.write(path_string)
+
+                    pathDirFile.write(path_string)
 
                     ############## save the images that has been used to create disparity######################
                     pairNumber = pairNumber + 1
@@ -1032,12 +1042,12 @@ def Main():
                     # write the time theese images have been taken to a file
                     dateTime_string = unicode(datetime.datetime.now())
                     path_string = str(pairNumber) + " , " + str(dateTime_string)
+
                     print "saving timeImages.txt"
                     # timeImages tokt name must be added
-                    timeTXTfileName = "timeImages_" + toktName + ".txt"
 
-                    with open(timeTXTfileName, 'w') as f:
-                        f.write(path_string + '\n')
+
+                    timeTXTfile.write(path_string + '\n')
 
                     ############### DISPLAY IMAGES HERE TO the USER ############################
 
@@ -1099,6 +1109,10 @@ def Main():
                 print "Frames displayed: %i"%framecount2
                 print "Frames dropped: %s"%droppedframes2
                 break
+
+        # close the .txt files that had been written to
+        pathDirFile.close()
+        timeTXTfile.close()
 
         ############ CLOSE THE CAMEREAS       ############
 
