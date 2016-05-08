@@ -81,11 +81,10 @@ def findCentroids(imgBW):
     centerCordinates = []
 
     #print 'centroids:', centroids
-    # TODO: only get the biggest centroid....
     for ctr in centroids:
         # draw a black little empty circle in the centroid position
-        centerCircle_Color = (0, 0, 0)
-        cv2.circle(imgBW, ctr, 4, centerCircle_Color)
+        #centerCircle_Color = (0, 0, 0)
+        #cv2.circle(imgBW, ctr, 4, centerCircle_Color)
 
         centerCordinates.append(ctr)
         #cv2.circle(imgBW, ctr, 5, (0,0,0))
@@ -128,8 +127,6 @@ def drawPath(Xpath,Ypos, image):
     #center = (int(x),int(y))
     radius = int(radius)
     cv2.circle(image, (Xpath,Ypos), radius, (255,255,255), 7)
-
-
 
     return image
 
