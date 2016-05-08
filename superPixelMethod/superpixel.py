@@ -123,7 +123,6 @@ def getHistofContoursOfSegments(segments, image, labelName):
 
 	return data, labels
 
-
 def centroidPrediction(imgBW, segments, model):
 	desc = LocalBinaryPatterns(24, 8)  # numPoints = 24, radius = 8
 	imgBWCopy = imgBW.astype(np.uint8)
@@ -204,53 +203,7 @@ def findCentroid(imgBW):
 		#print(centerCordinates[0])
 
 	return imgBW, centerCordinates
-'''
-def predictHistofSegments(segments, image, model):
-	# Use the Linear SVM  model to classify subsequent texture images:
 
-	# initialize the local binary patterns descriptor along with
-	# the data and label lists
-	desc = LocalBinaryPatterns(24, 8)  # numPoints = 24, radius = 8
-	data = []
-	labels = []
-	predictionList = []
-	centerList = []
-
-	# loop over the testing images
-	for (i, segVal) in enumerate(np.unique(segments)):
-		# load the image, convert it to grayscale, describe it,
-		# and classify it
-		# construct a mask for the segment
-		print "[x] inspecting segment %d" % (i)
-		mask = np.zeros(image.shape[:2], dtype="uint8")
-		mask[segments == segVal] = 255
-
-		imageROI = cv2.bitwise_and(image, image, mask=mask)
-		####### Get centroid of imageROI, to write prediction at this position
-
-		grayImage = cv2.cvtColor(imageROI, cv2.COLOR_BGR2GRAY)
-
-		grayImage, centerCordinates = findCentroid(grayImage)
-		centerCordinate = centerCordinates[0]
-		centerList.append(centerCordinate)
-
-		####### end -->Get centroid of imageROI, to write prediction at this position
-		hist = desc.describe(grayImage)
-		# what if i try to predict on a centroid instead of the masked image?
-
-		prediction = model.predict(hist)[0]
-
-		predictionList.append(prediction)
-
-
-		# display the image and the prediction
-		#cv2.putText(image, prediction, (10, 30), cv2.FONT_HERSHEY_SIMPLEX,
-		#			1.0, (0, 0, 255), 3)
-		#cv2.imshow("Image", image)
-		#cv2.waitKey(0)
-
-	showPredictionOutput(image, segments, predictionList, centerList)
-'''
 def predictHistofSegments(segments, image, model):
 	desc = LocalBinaryPatterns(24, 8)  # numPoints = 24, radius = 8
 	predictionList = []
@@ -280,8 +233,13 @@ def showPredictionOutput(image, segments, predictionList, centerList):
 	# show the output of the prediction
 	for (i, segVal) in enumerate(np.unique(segments)):
 		CORD = centerList[i]
+		if predictionList[i] == "other":
+			colorFont = (255, 0, 0)
+		else:
+			colorFont = (0, 0, 255)
+
 		cv2.putText(image, predictionList[i], CORD , cv2.FONT_HERSHEY_SIMPLEX,
-					1.0, (0, 0, 255), 3)
+					1.0, colorFont , 3)
 		merkedImage =  mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), segments)
 
 	cv2.imshow("segmented image", merkedImage)
@@ -296,15 +254,22 @@ def extractROIofSegment(image,segments):
 		mask = np.zeros(image.shape[:2], dtype="uint8")
 		mask[segments == segVal] = 255
 
-		imageMasked = cv2.bitwise_and(image, image, mask=mask)
+		#imageMasked = cv2.bitwise_and(image, image, mask=mask)
 
 		#cv2.imshow('mask', mask)
 		#cv2.imshow('imageMasked', imageMasked)
 		#cv2.waitKey(0)
 
+		# threshold the image, then perform a series of erosions +
+		# dilations to remove any small regions of noise
+		thresh = cv2.threshold(mask, 45, 255, cv2.THRESH_BINARY)[1]
+		thresh = cv2.erode(thresh, None, iterations=2)
+		thresh = cv2.dilate(thresh, None, iterations=4)
+
+
 		# calling the cv2.findContours on a treshold of the image
-		contours0, hierarchy = cv2.findContours(mask , cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-		moments = [cv2.moments(cnt) for cnt in contours0]
+		contours0, hierarchy = cv2.findContours(thresh , cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+		#moments = [cv2.moments(cnt) for cnt in contours0]
 
 		# rounded the centroids to integer.
 		#centroids = [(int(round(m['m10'] / m['m00'])), int(round(m['m01'] / m['m00']))) for m in moments]
@@ -381,7 +346,7 @@ def loadModel():
 	return joblib.load("model/filename_model.pkl")
 
 def main():
-	createdModel = True
+	createdModel = False
 
 	if createdModel == True:
 		model = loadModel()
@@ -400,10 +365,6 @@ def main():
 
 		# display segments
 		#showSLICoutput(image, segments)
-
-		#data, labels = getHistofSegments(segments, image, labelName = "ocean")
-
-		#dataOther, labelsOther = getHistofSegments(segments, image, labelName="other")
 
 		data, labels = getHistofContoursOfSegments(segments, image, labelName="ocean")
 
@@ -438,31 +399,7 @@ def main():
 	predictHistofSegments(segments, image, model)
 
 
-		# show the masked region
-		#cv2.imshow("Mask", mask)
-		#cv2.imshow("Applied", cv2.bitwise_and(image, image, mask=mask))
-		#cv2.waitKey(0)
-
-
-	'''
-	# loop over the training images
-	for imageROI in segments:
-		# load the image, convert it to grayscale, and describe it
-		#image = cv2.imread(imageROI)
-		grayImage = cv2.cvtColor(imageROI, cv2.COLOR_BGR2GRAY)
-		hist = desc.describe(grayImage)
-
-		# extract the label from the image path, then update the
-		# label and data lists
-		#labels.append(imageROI.split("/")[-2])
-		labels.append("ocean")
-		data.append(hist)
-	'''
-
-	# graph representations across regions of the image
-
 if __name__ == '__main__':
     cProfile.run('main()')
-
 
 	# http://peekaboo-vision.blogspot.fr/2012/09/segmentation-algorithms-in-scikits-image.html
