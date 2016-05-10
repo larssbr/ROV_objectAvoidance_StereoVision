@@ -377,8 +377,6 @@ def mainProcess():
     print "Xpos"
     print Xpos
 
-
-
     # check if there is a object in the image by using the treshold algorithm
     #matchINT = objectTreshold(IMG_L, IMG_R)
     #print "matchINT"
