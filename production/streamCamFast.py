@@ -25,9 +25,6 @@ def dispalyToUser(img1,img2):
 
 def disparityCalc(img1, img2, intrinsic_matrixL, intrinsic_matrixR, distCoeffL, distCoeffR):
     ############# CALCULATE Disparity ############################
-
-
-
     #print('Undistort the left images')
     undistorted_image_L = disp.UndistortImage(img1, intrinsic_matrixL, distCoeffL)
 
@@ -344,7 +341,6 @@ def drawTrackedPoints(img,pts_que_center):
     return img
 
 
-
 def trackGrowingObject(img, pts_que_center_list, pts_que_radius_list, radiusTresh=20):
     # pts_que_center_list
     #pts_que_center = deque(maxlen=15)
@@ -597,7 +593,6 @@ def pushBroomDispCalc(img1, img2, intrinsic_matrixL, intrinsic_matrixR, distCoef
     sbm.uniquenessRatio = 2 #0
     sbm.speckleRange = 100 #8
     sbm.speckleWindowSize = 10  #0 # decides how many pixels must be close to each other for the algorithm to keep them
-
 
 
     #gray_left = cv2.cv.fromarray(gray_left)

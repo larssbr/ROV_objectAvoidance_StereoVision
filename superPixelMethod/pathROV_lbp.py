@@ -10,6 +10,7 @@ import cProfile
 
 # to train classifier
 from localbinarypatterns import LocalBinaryPatterns
+
 from sklearn.svm import LinearSVC
 from skimage import feature
 import numpy as np
@@ -19,6 +20,7 @@ from imutils import paths
 
 # to save and load, the model that is created from the classification
 from sklearn.externals import joblib
+
 
 def findCentroids(imgBW):
     #_,imgBW = cv2.threshold(imgBW, 0, 255, cv2.THRESH_OTSU)
@@ -55,7 +57,6 @@ def findCentroids(imgBW):
         #print(centerCordinates[0])
 
     return imgBW, centerCordinates
-
 
 def findBiggestObject(img, radiusTresh, isObstacleInfront_based_on_radius):
     #width, height = img.shape[:2][::-1]
@@ -115,23 +116,6 @@ def findBiggestObject(img, radiusTresh, isObstacleInfront_based_on_radius):
 	'''
 
     return img, biggestObjectCenter, isObstacleInfront_based_on_radius
-
-
-#def removeOutliers(maskedImage):
-	# calling the cv2.findContours on a treshold of the image
-	#contours0, hierarchy = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-	#moments = [cv2.moments(cnt) for cnt in contours0]
-
-	# rounded the centroids to integer.
-	#centroids = [(int(round(m['m10'] / m['m00'])), int(round(m['m01'] / m['m00']))) for m in moments]
-
-	#for ctr in contours0:
-
-		# todo, if the radius of a given  centroid is less than a ratio. then dont take account for that centroid.
-
-
-		# find the biggest centroid. find its center coordinate
-
 
 def predictHistofSegments(segments, image, model):
 
@@ -268,8 +252,20 @@ def extractROIofSegmentandCenterList(image,segments, model):
 	return imageROIList, centerList, predictionList, image, maskedImage
 
 
+def resizeImage(image):
+	(h, w) = image.shape[:2]
+	width = 1360
+	# calculate the ratio of the width and construct the
+	# dimensions
+	r = width / float(w)
+	dim = (width, int(h * r))
+	inter = cv2.INTER_AREA
+	resized = cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
+	return resized
+
 
 def main():
+	#createdModel = False
 	createdModel = True
 
 	if createdModel == True:
@@ -279,12 +275,15 @@ def main():
 		# load the image and apply SLIC and extract (approximately)
 		# the supplied number of segments
 		image = cv2.imread("tokt1_R_1037.jpg")
+		image = resizeImage(image)
 		segments = slic(img_as_float(image), n_segments=100, sigma=5)
 
 		# Add a picture of not water, so that the Linear SVM can run, on more than one label, when it fits a model.
 		# this model is later used to decide the classification
 
+		#imageOther = cv2.imread("raptors.png")
 		imageOther = cv2.imread("raptors.png")
+		imageOther = resizeImage(imageOther)
 		segmentsOther = slic(img_as_float(imageOther), n_segments=100, sigma=5)
 
 		# display segments
@@ -292,7 +291,7 @@ def main():
 
 		data, labels = superpixel.getHistofContoursOfSegments(segments, image, labelName="ocean")
 
-		dataOther, labelsOther = superpixel.getHistofContoursOfSegments(segmentsOther, image, labelName="other")
+		dataOther, labelsOther = superpixel.getHistofContoursOfSegments(segmentsOther, imageOther, labelName="other")
 
 		print 'length of dataOther array and labelsOther array'
 		print str(len(dataOther))  # 108
@@ -314,9 +313,13 @@ def main():
 		model.fit(dataList, labelsList)   # TODO: get this error: ValueError: setting an array element with a sequence.
 
 		superpixel.saveModel(model)
-
+	#########################################################################################################################################
 	# test the prediction of the model
-	image = cv2.imread("tokt1_R_267.jpg")
+	#image = cv2.imread("tokt1_R_267.jpg")
+	image = cv2.imread("transpondertowerIMG/tokt1_L_473.jpg")
+
+
+	image = resizeImage(image)
 	# image = cv2.imread("tokt1_R_137.jpg")
 	segments = slic(img_as_float(image), n_segments=100, sigma=5)
 
