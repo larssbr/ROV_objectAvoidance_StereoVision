@@ -19,6 +19,12 @@ from imageTools import centroidTools
 from imageTools import messageTools
 from imageTools import drawTools
 
+# import the classes to do the superpixelMethod
+from pathROV_lbp import LocalBinaryPatterns
+from pathROV_lbp import modelTools
+from pathROV_lbp import analyseROITools
+from pathROV_lbp import predictionTool
+
 def nothing(x):
     pass
 
@@ -801,20 +807,6 @@ class DisparityImage:
             ####################### Calculations  #########################################
 
 
-
-            # and if you do : print(disparity.dtype) it shows : int16 and  it shows : uint8. so the type of the image has changed.
-
-            #print "(res.dtype)"
-            #print(disparity_visual.dtype)
-
-            # print "disp.dtype"
-            # print disp.dtype # float32
-
-            # cv2.imshow("disparity_visual normailized", disparity_visualBW)
-            # cv2.waitKey(0)
-
-
-
             # cv2.imshow("image after finding minimum bounding rectangle of object", imageDraw )
 
             # draw the new center in white
@@ -1003,11 +995,11 @@ def main():
     dirPathLeft = r"C:\CV_projects\ROV_objectAvoidance_StereoVision\simulationClean\images close to transponder\Left"
     dirPathRight = r"C:\CV_projects\ROV_objectAvoidance_StereoVision\simulationClean\images close to transponder\Right"
 
-    imgsLeft = Images(dirPathLeft)
+    imgsLeft     = Images(dirPathLeft)
     imgsRight = Images(dirPathRight)
 
-    imgsLeft.loadFromDirectory(dirPathLeft,False)
-    imgsRight.loadFromDirectory(dirPathRight,False)
+    imgsLeft.loadFromDirectory(dirPathLeft, False)
+    imgsRight.loadFromDirectory(dirPathRight, False)
 
     imageListLeft = imgsLeft.getimage_list()
     imgsListRight = imgsRight.getimage_list()
@@ -1053,31 +1045,64 @@ def main():
     cv2.createTrackbar(switch, trackBarWindowName, 0, 1, nothing)
 
     ##################################
+    # load superpixel model
+    createdModel = True
+    # createdModel = False    # toogle this value if you want to train the classifier
+
+
+    # 1 Get or create model
+    imageOcean = cv2.imread("tokt1_R_1037.jpg")
+    imageOther = cv2.imread("raptors.png")
+    modelClass = modelTools(createdModel, imageOcean, imageOther)
+    model = modelClass.get_model()
+
+
 
     ########################################################################
     print  "starting here"
     #for i, img in enumerate(imageList[:-1]):
     for i, img in enumerate(imageListLeft[:-1]):
        # 1 get left and right images
+        print "read in the images"
         frame_left = imageListLeft[i]
         frame_right = imgsListRight[i]
 
         # initialize DisparityImage class
-        dispClass = DisparityImage(imgLeft=frame_left, imgRight=frame_right)
+        #dispClass = DisparityImage(imgLeft=frame_left, imgRight=frame_right)
 
         # run the DisparityImage class process
-        [disparity_visual, isObsticleInFrontTreshValue] = dispClass.process()
+        #[disparity_visual, isObsticleInFrontTreshValue] = dispClass.process()
 
-        disparity_visualBW = cv2.convertScaleAbs(disparity_visual)
+        #disparity_visualBW = cv2.convertScaleAbs(disparity_visual)
 
         ############### display disparity image here       #################
-        print "disparity_visual.dtype"
-        print disparity_visual.dtype  # float32
+        #print "disparity_visual.dtype"
+        #print disparity_visual.dtype  # float32
+
+        #cv2.imshow("disparity_visual", disparity_visual)
+        #cv2.waitKey(1)
+        #######################################################################
+
+       # run superpixel method here if somthing
+
+        isObstacleInfront_based_on_radius = False
+        # 2 use model to predict a new image
+
+        # test the prediction of the model
+        # image = cv2.imread("tokt1_R_267.jpg")
+        radiusTresh = 40
+        print "run predictions"
+        # TODO: speed up the predictionTool class. it is way to slow. Maybe becouse it is copying the model variable in ?
+        predictionClass = predictionTool(frame_left, model, radiusTresh, isObstacleInfront_based_on_radius)
+
+        #predictionClass.show_maskedImage()
+        disparity_visual = predictionClass.get_maskedImage()
+        print " done running predictions"
 
         cv2.imshow("disparity_visual", disparity_visual)
         cv2.waitKey(1)
 
-        #######################################################################
+       ###############################################################################3
         # 2 calculate centroid info from disparity image
         # used to find out of information in the image to use for the obstacle avoidance module
         # create class
@@ -1178,6 +1203,7 @@ def main():
         path_string = str(pairNumber) + " , " + str(dateTime_string)
         print "saving timeImages.txt"
         timeTXTfile.write(path_string + '\n')
+        print "done saving timeImages.txt"
 
 
     # close the .txt files that had been written to
