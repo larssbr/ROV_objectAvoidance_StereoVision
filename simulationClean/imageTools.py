@@ -136,7 +136,6 @@ class centroidTools:
 
         return imgBW, biggestObjectCenter, pts_que_center_List, pts_que_radius_List
 
-
 class messageTools:
     def __init__(self, MESSAGE, objectCenter):
         self.MESSAGE = MESSAGE

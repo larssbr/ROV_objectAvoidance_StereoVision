@@ -323,20 +323,28 @@ class predictionTool:
 
 		imgBWCopy = imgBW.astype(np.uint8)
 
-
 		# contours0, hierarchy = cv2.findContours( imgBW.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 		contours0, hierarchy = cv2.findContours(imgBWCopy, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-		moments = [cv2.moments(cnt) for cnt in contours0]
-
-		# rounded the centroids to integer.
-		centroids = [(int(round(m['m10'] / m['m00'])), int(round(m['m01'] / m['m00']))) for m in moments]
 
 		centerCordinates = []
-		for ctr in centroids:
-			# draw a black little empty circle in the centroid position
-			centerCircle_Color = (0, 0, 0)
-			cv2.circle(imgBW, ctr, 4, centerCircle_Color)
-			centerCordinates.append(ctr)
+		try:
+			moments = [cv2.moments(cnt) for cnt in contours0]
+			# rounded the centroids to integer.
+			centroids = [(int(round(m['m10'] / m['m00'])), int(round(m['m01'] / m['m00']))) for m in moments]
+			for ctr in centroids:
+				# draw a black little empty circle in the centroid position
+				centerCircle_Color = (0, 0, 0)
+				#cv2.circle(imgBW, tuple(ctr), 4, centerCircle_Color)
+				centerCordinates.append(ctr)
+		except:
+			for ctr in contours0:
+				# draw a black little empty circle in the centroid position
+				centerCircle_Color = (0, 0, 0)
+				#cv2.imshow("imgBw", imgBW)
+				#cv2.waitKey(0)
+				#cv2.circle(imgBW, tuple(ctr), 4, centerCircle_Color)
+				centerCordinates.append(ctr)
+
 
 		return imgBW, centerCordinates
 
@@ -429,7 +437,7 @@ class predictionTool:
 
 
 def main():
-	createdModel = False
+	createdModel = True
 	#createdModel = False
 	isObstacleInfront_based_on_radius = False
 
@@ -444,7 +452,10 @@ def main():
 	# test the prediction of the model
 	# image = cv2.imread("tokt1_R_267.jpg")
 	radiusTresh = 30
-	image = cv2.imread("transpondertowerIMG/tokt1_L_473.jpg")
+	#image = cv2.imread("transpondertowerIMG/tokt1_L_473.jpg")
+	image = cv2.imread(r"C:\CV_projects\ROV_objectAvoidance_StereoVision\simulationClean\repeatExperiment\Left\tokt1_L_179.jpg")
+	#image = cv2.imread("transpondertowerIMG/tokt1_L_473.jpg")
+
 	predictionClass = predictionTool(image, model, radiusTresh, isObstacleInfront_based_on_radius)
 
 	image = predictionClass.get_maskedImage()

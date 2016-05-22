@@ -987,15 +987,19 @@ class ObstacleAvoidance:
         #print "distance_mm"
         #print self.distance_mm
 
+def saveImage(image_name_str, image):
+    cv2.imwrite(image_name_str, image)
+
 ########
 # MAIN #
 def main():
     # decide wich method you want to run --> 1 = disparity method, 2 = classification method
-    methodDecide = 1
+    methodDecide = 2
     isObstacleInfront_based_on_radius = False
     createdModel = True
-    #folderName_saveImages = "superpixelImagesSaved"
+    folderName_saveImagesSuper = "superpixelImagesSaved"
     folderName_saveImages = "disparityImagesSaved"
+    pairNumberSuper = 0
     ##### New method here that load all the images in a folder and
 
     #dirPath = r"C:\CV_projects\ROV_objectAvoidance_StereoVision\simulation\simulationImages1"
@@ -1116,13 +1120,17 @@ def main():
 
             #predictionClass.show_maskedImage()
             disparity_visual = predictionClass.get_maskedImage()
+            disparity_visualBW = disparity_visual
             print " done running predictions"
-
             cv2.imshow("disparity_visual", disparity_visual)
-            cv2.waitKey(0)
+            cv2.waitKey(1)
             #cv2.waitKey(0)
 
+            pairNumberSuper = pairNumberSuper + 1
+            imgNameString_super = folderName_saveImagesSuper + "/" + toktName + "_super_map_" + str(pairNumberSuper) + ".jpg"
+            #drawClass.saveImage(imgNameString_DISPARITY, drawClass.get_drawnImage())
 
+            saveImage(imgNameString_super, disparity_visual)
             #else:
             #    print "no object infront"
             #    continue
@@ -1189,32 +1197,28 @@ def main():
             drawClass.drawAVGcenter_circle()
             #drawClass.circle_around_object()
             #drawClass.drawBox()
-            drawClass.elipse_around_object()
+            if methodDecide == 1:
+                drawClass.elipse_around_object()
+            elif methodDecide == 2:
+                #drawClass.drawBox()
+                drawClass.circle_around_object()
+
             #drawClass.drawTextMessage(str(distance_mm))
 
             cv2.imshow("drawnImage", drawClass.get_drawnImage())
             cv2.waitKey(1)
 
-            ############## save the images that has been used to create disparity######################
+            ############## save the disparity with drawings ontop######################
             pairNumber = pairNumber + 1
-            #imgNameString_L = folderName_saveImages + "/" + toktName + "_L_" + str(pairNumber) + ".jpg"
-            #imgNameString_R = folderName_saveImages + "/" + toktName + "_R_" + str(pairNumber) + ".jpg"
-
             imgNameString_DISPARITY = folderName_saveImages + "/" + toktName + "_Disp_map_" + str(pairNumber) + ".jpg"
-
             drawClass.saveImage(imgNameString_DISPARITY, drawClass.get_drawnImage())
         except:
             pass
-
 
         # image_color_with_Draw = self.imgLeft.copy()
         # print "drawing over color image"
         # cv2.imshow("image_color_with_Draw",image_color_with_Draw)
         # cv2.waitKey(0)
-
-
-
-
 
         ##############################################################
         # 6 save information in .txt file
@@ -1238,7 +1242,6 @@ def main():
         print "saving timeImages.txt"
         timeTXTfile.write(path_string + '\n')
         print "done saving timeImages.txt"
-
 
     # close the .txt files that had been written to
     try:
