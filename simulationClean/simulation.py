@@ -25,10 +25,14 @@ from pathROV_lbp import modelTools
 from pathROV_lbp import analyseROITools
 from pathROV_lbp import predictionTool
 
+#
+from simple_lbp_model import simpleModelTools
+from simple_lbp_model import simpleAnalyseImageTools
+from simple_lbp_model import simplePredictionTool
+
+
 def nothing(x):
     pass
-
-
 
 ### Helper methods ###
 def getImg(frame_data, frame):
@@ -560,7 +564,6 @@ class TalkUDP:
         return CORD
         ##################### END PROGRAM CODE ############################################
 
-
 class DisparityImage:
     # This class calculates the disparity map from a left and right image
     # 1 rectifies images
@@ -833,8 +836,6 @@ class DisparityImage:
             #except:
             #    pass
 
-
-
 class ObstacleAvoidance:
 
     def __init__(self, disparity_visual, isObsticleInFrontTreshValue, objectAVGCenter, center):
@@ -989,13 +990,22 @@ class ObstacleAvoidance:
 ########
 # MAIN #
 def main():
+    # decide wich method you want to run --> 1 = disparity method, 2 = classification method
+    methodDecide = 1
+    isObstacleInfront_based_on_radius = False
+    createdModel = True
+    #folderName_saveImages = "superpixelImagesSaved"
+    folderName_saveImages = "disparityImagesSaved"
     ##### New method here that load all the images in a folder and
 
     #dirPath = r"C:\CV_projects\ROV_objectAvoidance_StereoVision\simulation\simulationImages1"
-    dirPathLeft = r"C:\CV_projects\ROV_objectAvoidance_StereoVision\simulationClean\images close to transponder\Left"
-    dirPathRight = r"C:\CV_projects\ROV_objectAvoidance_StereoVision\simulationClean\images close to transponder\Right"
+    #dirPathLeft = r"C:\CV_projects\ROV_objectAvoidance_StereoVision\simulationClean\images close to transponder\Left"
 
-    imgsLeft     = Images(dirPathLeft)
+    #dirPathRight = r"C:\CV_projects\ROV_objectAvoidance_StereoVision\simulationClean\images close to transponder\Right"
+    dirPathLeft = r"C:\CV_projects\ROV_objectAvoidance_StereoVision\simulationClean\repeatExperiment\Left"
+    dirPathRight = r"C:\CV_projects\ROV_objectAvoidance_StereoVision\simulationClean\repeatExperiment\Right"
+
+    imgsLeft = Images(dirPathLeft)
     imgsRight = Images(dirPathRight)
 
     imgsLeft.loadFromDirectory(dirPathLeft, False)
@@ -1046,17 +1056,22 @@ def main():
 
     ##################################
     # load superpixel model
-    createdModel = True
-    # createdModel = False    # toogle this value if you want to train the classifier
+    #createdModel = True
+    # toogle this value if you want to train the classifier
 
 
     # 1 Get or create model
+    # Create segmented model
     imageOcean = cv2.imread("tokt1_R_1037.jpg")
     imageOther = cv2.imread("raptors.png")
     modelClass = modelTools(createdModel, imageOcean, imageOther)
     model = modelClass.get_model()
 
-
+    # create model of the whole image
+    imageOcean = cv2.imread("tokt1_R_1037.jpg")
+    imageOther = cv2.imread("raptors.png")
+    simpleModelClass = simpleModelTools(createdModel, imageOcean, imageOther)
+    modelSimple = simpleModelClass.get_model()
 
     ########################################################################
     print  "starting here"
@@ -1067,40 +1082,50 @@ def main():
         frame_left = imageListLeft[i]
         frame_right = imgsListRight[i]
 
-        # initialize DisparityImage class
-        #dispClass = DisparityImage(imgLeft=frame_left, imgRight=frame_right)
+        ####### Run disparity method ##############
+        if methodDecide == 1:
+            # initialize DisparityImage class
+            dispClass = DisparityImage(imgLeft=frame_left, imgRight=frame_right)
 
-        # run the DisparityImage class process
-        #[disparity_visual, isObsticleInFrontTreshValue] = dispClass.process()
+            # run the DisparityImage class process
+            [disparity_visual, isObsticleInFrontTreshValue] = dispClass.process()
 
-        #disparity_visualBW = cv2.convertScaleAbs(disparity_visual)
+            disparity_visualBW = cv2.convertScaleAbs(disparity_visual)
 
-        ############### display disparity image here       #################
-        #print "disparity_visual.dtype"
-        #print disparity_visual.dtype  # float32
+            ############### display disparity image here       #################
+            #print "disparity_visual.dtype"
+            #print disparity_visual.dtype  # float32
 
-        #cv2.imshow("disparity_visual", disparity_visual)
-        #cv2.waitKey(1)
+            cv2.imshow("disparity_visual", disparity_visual)
+            cv2.waitKey(1)
         #######################################################################
 
        # run superpixel method here if somthing
+        elif methodDecide == 2:
+            #simplePredictionClass = simplePredictionTool(frame_left, modelSimple)
+            #if simplePredictionClass.get_isObstacleInFront():
+            print "object in front"
 
-        isObstacleInfront_based_on_radius = False
-        # 2 use model to predict a new image
+            # 2 use model to predict a new image
+            # test the prediction of the model
+            # image = cv2.imread("tokt1_R_267.jpg")
+            radiusTresh = 40
+            print "run predictions"
+            # TODO: speed up the predictionTool class. it is way to slow. Maybe becouse it is copying the model variable in ?
+            predictionClass = predictionTool(frame_left, model, radiusTresh, isObstacleInfront_based_on_radius)
 
-        # test the prediction of the model
-        # image = cv2.imread("tokt1_R_267.jpg")
-        radiusTresh = 40
-        print "run predictions"
-        # TODO: speed up the predictionTool class. it is way to slow. Maybe becouse it is copying the model variable in ?
-        predictionClass = predictionTool(frame_left, model, radiusTresh, isObstacleInfront_based_on_radius)
+            #predictionClass.show_maskedImage()
+            disparity_visual = predictionClass.get_maskedImage()
+            print " done running predictions"
 
-        #predictionClass.show_maskedImage()
-        disparity_visual = predictionClass.get_maskedImage()
-        print " done running predictions"
+            cv2.imshow("disparity_visual", disparity_visual)
+            cv2.waitKey(0)
+            #cv2.waitKey(0)
 
-        cv2.imshow("disparity_visual", disparity_visual)
-        cv2.waitKey(1)
+
+            #else:
+            #    print "no object infront"
+            #    continue
 
        ###############################################################################3
         # 2 calculate centroid info from disparity image
@@ -1165,10 +1190,19 @@ def main():
             #drawClass.circle_around_object()
             #drawClass.drawBox()
             drawClass.elipse_around_object()
-            drawClass.drawTextMessage(str(distance_mm))
+            #drawClass.drawTextMessage(str(distance_mm))
 
             cv2.imshow("drawnImage", drawClass.get_drawnImage())
             cv2.waitKey(1)
+
+            ############## save the images that has been used to create disparity######################
+            pairNumber = pairNumber + 1
+            #imgNameString_L = folderName_saveImages + "/" + toktName + "_L_" + str(pairNumber) + ".jpg"
+            #imgNameString_R = folderName_saveImages + "/" + toktName + "_R_" + str(pairNumber) + ".jpg"
+
+            imgNameString_DISPARITY = folderName_saveImages + "/" + toktName + "_Disp_map_" + str(pairNumber) + ".jpg"
+
+            drawClass.saveImage(imgNameString_DISPARITY, drawClass.get_drawnImage())
         except:
             pass
 

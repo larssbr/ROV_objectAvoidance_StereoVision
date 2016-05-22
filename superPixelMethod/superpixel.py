@@ -75,8 +75,6 @@ def getHistofSegments(segments, image, labelName):
 
 		imageROI = cv2.bitwise_and(image, image, mask=mask)
 
-
-
 		grayImage = cv2.cvtColor(imageROI, cv2.COLOR_BGR2GRAY)
 		hist = desc.describe(grayImage)
 
@@ -85,7 +83,6 @@ def getHistofSegments(segments, image, labelName):
 		# labels.append(imageROI.split("/")[-2])
 		labels.append(labelName)
 		data.append(hist)
-
 	return data, labels
 
 def getHistofContoursOfSegments(segments, image, labelName):
@@ -100,7 +97,6 @@ def getHistofContoursOfSegments(segments, image, labelName):
 	# 1. Loop over each superpixel and extract its contour.
 	# 2. Compute bounding box of contour.
 	# 3. Extract the rectangular ROI.
-
 	# 4. Pass that into your descriptor to obtain your feature vector.
 	# describeROI()
 
@@ -149,8 +145,6 @@ def centroidPrediction(imgBW, segments, model):
 		prediction = model.predict(hist)[0]
 
 		predictionList.append(prediction)
-
-
 
 	# loop over the testing images
 	for (i, segVal) in enumerate(np.unique(segments)):

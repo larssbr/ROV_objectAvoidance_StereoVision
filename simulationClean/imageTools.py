@@ -247,6 +247,8 @@ class drawTools:
         return self.image
 
 
+    def saveImage(self, image_name_str, image):
+        cv2.imwrite(image_name_str, image)
 
     def drawStuff(self, centerCordinates):
         # http://opencvpython.blogspot.no/2012/06/contours-2-brotherhood.html
@@ -295,6 +297,7 @@ class drawTools:
             pixelSizeOfObject = 50
 
         return self.image, pixelSizeOfObject
+
 
 ##############################################################################################################################################################
 ##### helper methods

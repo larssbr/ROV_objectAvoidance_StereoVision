@@ -1,6 +1,5 @@
-#import superpixel
-import cv2
 
+import cv2
 # import the necessary packages
 from skimage.segmentation import slic
 from skimage.segmentation import mark_boundaries
@@ -65,8 +64,6 @@ class modelTools:
 			# need to load the model after it is created
 			self.model = self.loadModel()
 
-
-
 	def saveModel(self, model):
 		joblib.dump(model, "model/filename_model.pkl")
 
@@ -98,11 +95,9 @@ class analyseROITools:
 	def __init__(self, image, labelName):
 
 		self.image = image
-
-
 		self.segments = self.get_segments(image)
 
-		self.imageROIList = self.get_ROIofContoursList()
+		self.imageROIList = self.get_ROIofContoursList(image, self.segments)
 		self.labelName = labelName
 		#self.data, self.labels = self.get_HistofContoursOfSegments()
 
@@ -111,17 +106,17 @@ class analyseROITools:
 		segments = slic(img_as_float(image), n_segments=100, sigma=5)
 		return segments
 
-	def get_ROIofContoursList(self):
+	def get_ROIofContoursList(self, image, segments):
 		# 1. Loop over each superpixel segment and extract its contour.
 		# 2. Compute bounding box of contour.
 		# 3. Extract the rectangular ROI.
 
 		imageROIList = []
-		for (i, segVal) in enumerate(np.unique(self.segments)):
+		for (i, segVal) in enumerate(np.unique(segments)):
 			# construct a mask for the segment
 			print "[x] inspecting segment %d" % (i)
-			mask = np.zeros(self.image.shape[:2], dtype="uint8")
-			mask[self.segments == segVal] = 255
+			mask = np.zeros(image.shape[:2], dtype="uint8")
+			mask[segments == segVal] = 255
 
 			# threshold the image, then perform a series of erosions +
 			# dilations to remove any small regions of noise
@@ -147,7 +142,7 @@ class analyseROITools:
 				# 3 extract the rectangular ROI
 				# extract the ROI from the image and draw a bounding box
 				# surrounding the MRZ
-				imageROI = self.image[y:y + h, x:x + w].copy()
+				imageROI = image[y:y + h, x:x + w].copy()
 				imageROIList.append(imageROI)
 			# cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
@@ -179,8 +174,9 @@ class analyseROITools:
 			# extract the label from the image path, then update the
 			# label and data lists
 			# labels.append(imageROI.split("/")[-2])
-			labels.append(labelName)
 			data.append(hist)
+			labels.append(labelName)
+
 
 		return data, labels
 
@@ -192,15 +188,15 @@ class predictionTool:
 		self.image = image
 		self.model = model
 		self.radiusTresh = radiusTresh
+		self.h, self.w = image.shape[:2]
 
 		self.centerCordinates = []
 		self.desc = LocalBinaryPatterns(24, 8)
 
 		self.segments = self.get_segments(image)
-		self.imageROIList = self.get_ROIofContoursList()
-
-
-		self.imageROIList, self.centerList, self.predictionList, self.maskedImage = self.extractROIofSegmentandCenterList()
+		#self.imageROIList = self.get_ROIofContoursList()
+		#self.mask = np.zeros(self.image.shape[:2], dtype="uint8")
+		self.imageROIList, self.centerList, self.predictionList, self.maskedImage = self.extractROIofSegmentandCenterList(image, self.segments)
 
 	# self.data, self.labels = self.get_HistofContoursOfSegments()
 
@@ -217,7 +213,7 @@ class predictionTool:
 
 	def get_segments(self, image):
 		image = self.resizeImage(image)
-		segments = slic(img_as_float(image), n_segments=100, sigma=5)
+		segments = slic(img_as_float(image), n_segments=100, sigma=5)  # was 100
 		return segments
 
 	def get_ROIofContoursList(self):
@@ -226,9 +222,10 @@ class predictionTool:
 		# 3. Extract the rectangular ROI.
 
 		imageROIList = []
+		#mask = np.zeros(self.image.shape[:2], dtype="uint8")
 		for (i, segVal) in enumerate(np.unique(self.segments)):
 			# construct a mask for the segment
-			print "[x] inspecting segment %d" % (i)
+			#print "[x] inspecting segment %d" % (i)
 			mask = np.zeros(self.image.shape[:2], dtype="uint8")
 			mask[self.segments == segVal] = 255
 
@@ -238,46 +235,42 @@ class predictionTool:
 			thresh = cv2.erode(thresh, None, iterations=2)
 			thresh = cv2.dilate(thresh, None, iterations=4)
 
-			# calling the cv2.findContours on a treshold of the image
-			contours0, hierarchy = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-			# moments = [cv2.moments(cnt) for cnt in contours0]
+		# calling the cv2.findContours on a treshold of the image
+		contours0, hierarchy = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+		# moments = [cv2.moments(cnt) for cnt in contours0]
 
-			# rounded the centroids to integer.
-			# centroids = [(int(round(m['m10'] / m['m00'])), int(round(m['m01'] / m['m00']))) for m in moments]
+		# rounded the centroids to integer.
+		# centroids = [(int(round(m['m10'] / m['m00'])), int(round(m['m01'] / m['m00']))) for m in moments]
 
-			# print 'len(contours0)'
-			# print len(contours0)
-			for ctr in contours0:
-				# 2 compute bounding box of countour
-				# box = cv2.minAreaRect(ctr)
-				# (x, y, w, h) = cv2.minAreaRect(ctr)
-				(x, y, w, h) = cv2.boundingRect(ctr)
+		# print 'len(contours0)'
+		# print len(contours0)
+		for ctr in contours0:
+			# 2 compute bounding box of countour
+			(x, y, w, h) = cv2.boundingRect(ctr)
 
-				# 3 extract the rectangular ROI
-				# extract the ROI from the image and draw a bounding box
-				# surrounding the MRZ
-				imageROI = self.image[y:y + h, x:x + w].copy()
-				imageROIList.append(imageROI)
-			# cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+			# 3 extract the rectangular ROI
+			imageROI = self.image[y:y + h, x:x + w].copy()
+			imageROIList.append(imageROI)
 
 		return imageROIList
 
-	def extractROIofSegmentandCenterList(self):
+	def extractROIofSegmentandCenterList(self, image, segments):
 		#desc = LocalBinaryPatterns(24, 8)
 		centerList = []
 		imageROIList =[]
 		predictionList = []
 		# create mask
-		maskedImage = np.zeros(self.image.shape[:2],
-							   dtype="uint8")  # This mask has the same width and height a the original image and has a default value of 0 (black).
+		# This mask has the same width and height a the original image and has a default value of 0 (black).
+		maskedImage = np.zeros(image.shape[:2], dtype="uint8")
+
 
 		# loop over the unique segment values
-		for (i, segVal) in enumerate(np.unique(self.segments)):
+		for (i, segVal) in enumerate(np.unique(segments)):
 			# construct a mask for the segment
 			print "[x] inspecting segment %d" % (i)
-			mask = np.zeros(self.image.shape[:2], dtype="uint8")
-			mask[self.segments == segVal] = 255
-			imageMasked = cv2.bitwise_and(self.image, self.image, mask=mask)
+			mask = np.zeros(image.shape[:2], dtype="uint8")
+			mask[segments == segVal] = 255
+			imageMasked = cv2.bitwise_and(image, image, mask=mask)
 			grayImage = cv2.cvtColor(imageMasked, cv2.COLOR_BGR2GRAY)
 
 			imageMasked, centerCordinates = self.findCentroid(grayImage)
@@ -297,17 +290,12 @@ class predictionTool:
 
 			for ctr in contours0:
 				# 2 compute bounding box of countour
-				# box = cv2.minAreaRect(ctr)
-				# (x, y, w, h) = cv2.minAreaRect(ctr)
 				(x, y, w, h) = cv2.boundingRect(ctr)
 
 				# 3 extract the rectangular ROI
-				# Extract the ROI from the image and draw a bounding box
-				# surrounding the MRZ
-				imageROI = self.image[y:y + h, x:x + w].copy()
+				imageROI = image[y:y + h, x:x + w].copy()
 
 				# Mask the imageROI here according to prediction
-
 				# 4 pass that into descriptor to obtain feature vector.
 
 				grayImageROI = cv2.cvtColor(imageROI, cv2.COLOR_BGR2GRAY)
@@ -321,7 +309,6 @@ class predictionTool:
 				predictionList.append(prediction)
 
 				# construct a mask for the segment
-
 				if prediction == "other":
 					maskedImage[y:y + h, x:x + w] = 255
 
@@ -329,15 +316,6 @@ class predictionTool:
 					maskedImage[y:y + h, x:x + w] = 0
 
 				imageROIList.append(grayImageROI)
-			# cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-			# put the image "back together"
-			# image[y:y + h, x:x + w] = grayImageROI
-
-		# grayImageROI = cv2.bitwise_and(grayImageROI, grayImageROI, mask=mask)
-		# image = cv2.bitwise_and(image, image, mask=mask)
-
-
 
 		return imageROIList, centerList, predictionList, maskedImage
 
@@ -345,7 +323,7 @@ class predictionTool:
 
 		imgBWCopy = imgBW.astype(np.uint8)
 
-		h, w = imgBW.shape[:2]
+
 		# contours0, hierarchy = cv2.findContours( imgBW.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 		contours0, hierarchy = cv2.findContours(imgBWCopy, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 		moments = [cv2.moments(cnt) for cnt in contours0]
@@ -358,16 +336,7 @@ class predictionTool:
 			# draw a black little empty circle in the centroid position
 			centerCircle_Color = (0, 0, 0)
 			cv2.circle(imgBW, ctr, 4, centerCircle_Color)
-
 			centerCordinates.append(ctr)
-			# cv2.circle(imgBW, ctr, 5, (0,0,0))
-			ctrTimes = 1
-		# if ctrTimes == 1:  # Only wants the first ctr
-		#    break
-
-		# print "ctr"
-		# print ctr
-		# print(centerCordinates[0])
 
 		return imgBW, centerCordinates
 
@@ -394,7 +363,7 @@ class predictionTool:
 			merkedImage = mark_boundaries(img_as_float(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)), segments)
 
 		cv2.imshow("segmented image", merkedImage)
-		cv2.waitKey(0)
+		cv2.waitKey(1)
 
 	##############################################################################
 
@@ -460,8 +429,8 @@ class predictionTool:
 
 
 def main():
-	#createdModel = True
 	createdModel = False
+	#createdModel = False
 	isObstacleInfront_based_on_radius = False
 
 	# 1 Get or create model
@@ -478,7 +447,9 @@ def main():
 	image = cv2.imread("transpondertowerIMG/tokt1_L_473.jpg")
 	predictionClass = predictionTool(image, model, radiusTresh, isObstacleInfront_based_on_radius)
 
-	predictionClass.show_maskedImage()
+	image = predictionClass.get_maskedImage()
+	cv2.imshow("image", image)
+	cv2.waitKey(0)
 
 	#image = resizeImage(image)
 	# image = cv2.imread("tokt1_R_137.jpg")

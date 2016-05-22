@@ -56,7 +56,6 @@ class Images:
 
         #self.logger.info("Data loaded successfully.")
 
-
     # Inbar Rose answer in thread http://stackoverflow.com/questions/11953824/how-to-read-filenames-in-a-folder-and-access-them-in-an-alphabetical-and-increas
     def get_sorted_files(self, dir_path):
         filenamelist = []
