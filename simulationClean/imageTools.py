@@ -198,7 +198,8 @@ class drawTools:
 
     def circle_around_object(self):
         ########### circle around object #######3
-
+        # need try since: OpenCV Error: Assertion failed (points.checkVector(2) >= 0 && (points.depth() == CV_32F || points.depth() == CV_32S)) in cv::minEnclosingCircle,
+        # if less then 2 "points" in image the mehod has problem making a circle...
         try:
             (x, y), radius = cv2.minEnclosingCircle(self.centerCordinates)
             center = (int(x), int(y))

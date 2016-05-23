@@ -26,7 +26,7 @@ from skimage import feature
 import numpy as np
 
 class LocalBinaryPatterns:
-
+	# this class is from: http://www.pyimagesearch.com/2015/12/07/local-binary-patterns-with-python-opencv/
 	def __init__(self, numPoints, radius):
 		# store the number of points and radius
 		self.numPoints = numPoints
@@ -51,8 +51,8 @@ class LocalBinaryPatterns:
 class modelTools:
 
 	def __init__(self, createdModel, imageOcean, imageOther):
-		self.imageOcean =  imageOcean
-		self.imageOther =  imageOther
+		self.imageOcean =  self.resizeImage(imageOcean)
+		self.imageOther =  self.resizeImage(imageOther)
 
 		#createdModel = True
 
@@ -90,6 +90,18 @@ class modelTools:
 	def get_model(self):
 		return self.model
 
+	def resizeImage(self, image):
+		(h, w) = image.shape[:2]
+		# width = 1360
+		width = 360
+		# calculate the ratio of the width and construct the
+		# dimensions
+		r = width / float(w)
+		dim = (width, int(h * r))
+		inter = cv2.INTER_AREA
+		resized = cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
+		return resized
+
 class analyseROITools:
 
 	def __init__(self, image, labelName):
@@ -99,6 +111,10 @@ class analyseROITools:
 
 		self.imageROIList = self.get_ROIofContoursList(image, self.segments)
 		self.labelName = labelName
+		#self.desc = LocalBinaryPatterns(24, 8)  # numPoints = 24, radius = 8
+
+		self.desc = LocalBinaryPatterns(10, 5)  # numPoints = 24, radius = 8
+
 		#self.data, self.labels = self.get_HistofContoursOfSegments()
 
 	def get_segments(self, image):
@@ -151,7 +167,7 @@ class analyseROITools:
 	def get_HistofContoursOfSegments(self, labelName):
 		# initialize the local binary patterns descriptor along with
 		# the data and label lists
-		desc = LocalBinaryPatterns(24, 8)  # numPoints = 24, radius = 8
+		desc = self.desc
 		# initialize the image descriptor -- a 2D LAB histogram using A and B channel with 8 bins per channel
 		#desc = LABHistogram([8, 8])
 		data = []
@@ -184,25 +200,27 @@ class predictionTool:
 
 	def __init__(self, image, model, radiusTresh, isObstacleInfront_based_on_radius):
 
-		#self.image = self.resizeImage(image)
-		self.image = image
+		self.image = self.resizeImage(image)
+		self.segments = self.get_segments(image)
+		#self.image = image
 		self.model = model
 		self.radiusTresh = radiusTresh
-		self.h, self.w = image.shape[:2]
+		#self.h, self.w = image.shape[:2]
 
 		self.centerCordinates = []
-		self.desc = LocalBinaryPatterns(24, 8)
+		#self.desc = LocalBinaryPatterns(24, 8)
+		self.desc = LocalBinaryPatterns(10, 5)
 
-		self.segments = self.get_segments(image)
 		#self.imageROIList = self.get_ROIofContoursList()
 		#self.mask = np.zeros(self.image.shape[:2], dtype="uint8")
-		self.imageROIList, self.centerList, self.predictionList, self.maskedImage = self.extractROIofSegmentandCenterList(image, self.segments)
+		self.imageROIList, self.centerList, self.predictionList, self.maskedImage = self.extractROIofSegmentandCenterList(self.image, self.segments)
 
 	# self.data, self.labels = self.get_HistofContoursOfSegments()
 
 	def resizeImage(self, image):
 		(h, w) = image.shape[:2]
-		width = 1360
+		#width = 1360
+		width = 360
 		# calculate the ratio of the width and construct the
 		# dimensions
 		r = width / float(w)

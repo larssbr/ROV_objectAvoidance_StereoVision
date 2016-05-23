@@ -6,12 +6,9 @@ import cProfile
 import math # to get math.pi value
 import socket # to send UDP message to labview pc
 
-
-
 import imageTools as proc
 from collections import deque # to keep track of a que of last poitions of the center of an object
 import datetime # to print the time to the textfile
-
 
 from importDataset import Images  # Import the functions made in importDataset
 
@@ -25,11 +22,9 @@ from pathROV_lbp import modelTools
 from pathROV_lbp import analyseROITools
 from pathROV_lbp import predictionTool
 
-#
 from simple_lbp_model import simpleModelTools
 from simple_lbp_model import simpleAnalyseImageTools
 from simple_lbp_model import simplePredictionTool
-
 
 def nothing(x):
     pass
@@ -996,7 +991,7 @@ def main():
     # decide wich method you want to run --> 1 = disparity method, 2 = classification method
     methodDecide = 2
     isObstacleInfront_based_on_radius = False
-    createdModel = True
+    createdModel = False
     folderName_saveImagesSuper = "superpixelImagesSaved"
     folderName_saveImages = "disparityImagesSaved"
     pairNumberSuper = 0
@@ -1062,7 +1057,6 @@ def main():
     # load superpixel model
     #createdModel = True
     # toogle this value if you want to train the classifier
-
 
     # 1 Get or create model
     # Create segmented model
