@@ -20,7 +20,7 @@ from imutils import paths
 # to save and load, the model that is created from the classification
 from sklearn.externals import joblib
 
-from pathROV_lbp import LocalBinaryPatterns
+from slicSuperpixel_lbp_method import LocalBinaryPatterns
 
 class simpleModelTools:
 
@@ -117,7 +117,7 @@ class simplePredictionTool:
 
     def resizeImage(self, image):
         (h, w) = image.shape[:2]
-        width = 1360
+        width = 360
         # calculate the ratio of the width and construct the
         # dimensions
         r = width / float(w)

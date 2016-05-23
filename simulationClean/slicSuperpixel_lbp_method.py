@@ -20,7 +20,6 @@ from imutils import paths
 # to save and load, the model that is created from the classification
 from sklearn.externals import joblib
 
-
 # import the necessary packages
 from skimage import feature
 import numpy as np
@@ -36,7 +35,9 @@ class LocalBinaryPatterns:
 		# compute the Local Binary Pattern representation
 		# of the image, and then use the LBP representation
 		# to build the histogram of patterns
-		lbp = feature.local_binary_pattern(image, self.numPoints, self.radius, method="uniform")
+		lbp = feature.local_binary_pattern(image, self.numPoints, self.radius, method= "uniform" ) # method= "ror") #method="var")# method="nri_uniform")  # method="uniform")
+		# using unifrom binary pattern (watch this to understand better): https://www.youtube.com/watch?annotation_id=annotation_98709127&feature=iv&src_vid=wpAwdsubl1w&v=v-gkPTvdgYo
+		# different merhod= --> http://scikit-image.org/docs/dev/api/skimage.feature.html?highlight=local_binary_pattern#skimage.feature.local_binary_pattern
 		(hist, _) = np.histogram(lbp.ravel(),
 			bins=np.arange(0, self.numPoints + 3),
 			range=(0, self.numPoints + 2))
@@ -113,7 +114,8 @@ class analyseROITools:
 		self.labelName = labelName
 		#self.desc = LocalBinaryPatterns(24, 8)  # numPoints = 24, radius = 8
 
-		self.desc = LocalBinaryPatterns(10, 5)  # numPoints = 24, radius = 8
+		#self.desc = LocalBinaryPatterns(10, 5)  # numPoints = 24, radius = 8
+		self.desc = LocalBinaryPatterns(10, 5)
 
 		#self.data, self.labels = self.get_HistofContoursOfSegments()
 
@@ -209,6 +211,7 @@ class predictionTool:
 
 		self.centerCordinates = []
 		#self.desc = LocalBinaryPatterns(24, 8)
+		#self.desc = LocalBinaryPatterns(10, 5)
 		self.desc = LocalBinaryPatterns(10, 5)
 
 		#self.imageROIList = self.get_ROIofContoursList()
@@ -455,7 +458,7 @@ class predictionTool:
 
 
 def main():
-	createdModel = True
+	createdModel = False
 	#createdModel = False
 	isObstacleInfront_based_on_radius = False
 
@@ -471,7 +474,8 @@ def main():
 	# image = cv2.imread("tokt1_R_267.jpg")
 	radiusTresh = 30
 	#image = cv2.imread("transpondertowerIMG/tokt1_L_473.jpg")
-	image = cv2.imread(r"C:\CV_projects\ROV_objectAvoidance_StereoVision\simulationClean\repeatExperiment\Left\tokt1_L_179.jpg")
+	#image = cv2.imread(r"C:\CV_projects\ROV_objectAvoidance_StereoVision\simulationClean\repeatExperiment\Left\tokt1_L_179.jpg")
+	image = cv2.imread(r"C:\CV_projects\ROV_objectAvoidance_StereoVision\simulationClean\repeatExperiment\Left\tokt1_L_154.jpg")
 	#image = cv2.imread("transpondertowerIMG/tokt1_L_473.jpg")
 
 	predictionClass = predictionTool(image, model, radiusTresh, isObstacleInfront_based_on_radius)
@@ -479,25 +483,6 @@ def main():
 	image = predictionClass.get_maskedImage()
 	cv2.imshow("image", image)
 	cv2.waitKey(0)
-
-	#image = resizeImage(image)
-	# image = cv2.imread("tokt1_R_137.jpg")
-	#segments = slic(img_as_float(image), n_segments=100, sigma=5)
-
-	# predictHistofSegments(segments, image, model)
-	################################################################
-	#imageROIList, centerList, predictionList, image, maskedImage = extractROIofSegmentandCenterList(image, segments, model)
-	# image = removeOutliers(maskedImage)
-	#radiusTresh = 1
-
-	#img, biggestObjectCenter, isObstacleInfront_based_on_radius = findBiggestObject(maskedImage, radiusTresh, isObstacleInfront_based_on_radius)
-
-	#if isObstacleInfront_based_on_radius:
-	#	cv2.imshow("biggest object image", img)
-	#	cv2.waitKey(0)
-
-	#showPredictionOutput(image, segments, predictionList, centerList)
-
 
 if __name__ == '__main__':
     cProfile.run('main()')

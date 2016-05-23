@@ -17,10 +17,10 @@ from imageTools import messageTools
 from imageTools import drawTools
 
 # import the classes to do the superpixelMethod
-from pathROV_lbp import LocalBinaryPatterns
-from pathROV_lbp import modelTools
-from pathROV_lbp import analyseROITools
-from pathROV_lbp import predictionTool
+from slicSuperpixel_lbp_method import LocalBinaryPatterns
+from slicSuperpixel_lbp_method import modelTools
+from slicSuperpixel_lbp_method import analyseROITools
+from slicSuperpixel_lbp_method import predictionTool
 
 from simple_lbp_model import simpleModelTools
 from simple_lbp_model import simpleAnalyseImageTools
